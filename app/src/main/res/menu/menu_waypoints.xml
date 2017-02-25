@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto">
+
+  <item android:id="@+id/waypoints_action_favorite"
+    android:icon="@drawable/ic_star_white_48px"
+    android:title="@string/waypoints_action_favorite"
+    app:showAsAction="always"/>
+</menu>

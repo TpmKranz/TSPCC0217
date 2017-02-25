@@ -1,0 +1,16 @@
+<resources>
+  <string name="app_name">TSPCC0217</string>
+  <string name="waypoint_coords">Coordinates</string>
+  <string name="waypoint_label">Label</string>
+  <string name="waypoint_origin">Route origin</string>
+  <string name="waypoint_origin_choose">Choose</string>
+  <string name="waypoint_add">Add waypoint</string>
+  <string name="waypoint_wait_map">Loading map...</string>
+  <string name="waypoint_wait_distances">Fetching distance matrix...</string>
+  <string name="waypoints_action_favorite">Favorites</string>
+  <string name="waypoints_action_favorite_cancel">Cancel</string>
+  <string name="waypoints_action_favorite_add">Add</string>
+  <string name="waypoints_action_favorite_add_uninserted_p">%s were not added because the list was already full.</string>
+  <string name="waypoints_action_favorite_add_uninserted_s">%s was not added because the list was already full.</string>
+  <string name="waypoint_wait_computation">Computing shortest path...</string>
+</resources>
