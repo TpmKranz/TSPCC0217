@@ -14,4 +14,5 @@
   <string name="waypoints_action_favorite_add_uninserted_s">%s was not added because the list was already full.</string>
   <string name="waypoint_wait_computation">Computing shortest path...</string>
   <string name="waypoint_wait_title">Solving the TSP</string>
+  <string name="waypoints_action_favorite_invert">Invert selection</string>
 </resources>
