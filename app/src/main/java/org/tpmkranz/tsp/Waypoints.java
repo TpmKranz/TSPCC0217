@@ -114,7 +114,7 @@ public class Waypoints extends AppCompatActivity {
     }
     this.listAdapter.setSharedPreferences(prefs);
     this.listView.setAdapter(listAdapter);
-    if (listAdapter.getItemCount() <= 1) {
+    if (listAdapter.getItemCount() <= 2) {
       computeFab.hide();
     }
     if (listAdapter.getItemCount() >= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
@@ -131,12 +131,10 @@ public class Waypoints extends AppCompatActivity {
       @Override
       public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
         listAdapter.removeWaypoint(viewHolder.getAdapterPosition());
-        if (computeFab.getVisibility() == View.VISIBLE
-            && listAdapter.getItemCount() < 3) {
+        if (listAdapter.getItemCount() <= 2) {
           computeFab.hide();
         }
-        if (addFab.getVisibility() != View.VISIBLE
-            && listAdapter.getItemCount() <= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
+        if (listAdapter.getItemCount() <= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
           addFab.show();
         }
       }
@@ -170,12 +168,10 @@ public class Waypoints extends AppCompatActivity {
     }
     if (resultCode == RESULT_OK) {
       this.listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
-      if (computeFab.getVisibility() != View.VISIBLE
-          && listAdapter.getItemCount() > 2) {
+      if (listAdapter.getItemCount() > 2) {
         computeFab.show();
       }
-      if (addFab.getVisibility() == View.VISIBLE
-          && listAdapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
+      if (listAdapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
         addFab.hide();
       }
     }
@@ -192,7 +188,7 @@ public class Waypoints extends AppCompatActivity {
   }
 
   public void computeRoute(View view) {
-    if (listAdapter.getItemCount() < 3) {
+    if (listAdapter.getItemCount() <= 2) {
       return;
     }
     if (waitForComputation != null) {
@@ -323,12 +319,10 @@ public class Waypoints extends AppCompatActivity {
     public void onClick(DialogInterface dialog, int which) {
       if (which == DialogInterface.BUTTON_POSITIVE) {
         Set<SerializablePlace> uninserted = adapter.addFavorites(choices);
-        if (compute.getVisibility() != View.VISIBLE
-            && adapter.getItemCount() > 2) {
+        if (adapter.getItemCount() > 2) {
           compute.show();
         }
-        if (add.getVisibility() == View.VISIBLE
-            && adapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
+        if (adapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
           add.hide();
         }
 

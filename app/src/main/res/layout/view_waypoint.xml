@@ -9,14 +9,14 @@
   android:layout_height="wrap_content"
   app:cardPreventCornerOverlap="true"
   app:cardUseCompatPadding="true"
-  android:layout_marginLeft="@dimen/activity_horizontal_margin"
-  android:layout_marginRight="@dimen/activity_horizontal_margin"
+  android:layout_marginLeft="@dimen/card_horizontal_margin"
+  android:layout_marginRight="@dimen/card_horizontal_margin"
   android:layout_marginTop="@dimen/card_vertical_margin"
   android:layout_marginBottom="@dimen/card_vertical_margin"
-  app:contentPaddingLeft="@dimen/card_horizontal_margin"
-  app:contentPaddingRight="@dimen/card_horizontal_margin"
-  app:contentPaddingTop="@dimen/card_vertical_margin"
-  app:contentPaddingBottom="@dimen/card_vertical_margin">
+  app:contentPaddingLeft="@dimen/card_horizontal_padding"
+  app:contentPaddingRight="@dimen/card_horizontal_padding"
+  app:contentPaddingTop="@dimen/card_vertical_padding"
+  app:contentPaddingBottom="@dimen/card_vertical_padding">
   <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -33,13 +33,13 @@
       <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/card_vertical_margin"
+        android:layout_marginTop="@dimen/card_vertical_padding"
         android:textAppearance="?android:textAppearanceSmall"
         android:textStyle="italic"/>
     <LinearLayout
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/card_vertical_margin">
+      android:layout_marginTop="@dimen/card_vertical_padding">
       <ImageSwitcher
         android:layout_width="0dp"
         android:layout_height="wrap_content"
