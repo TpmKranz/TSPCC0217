@@ -15,13 +15,11 @@
       android:layout_height="?attr/actionBarSize"
       android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
       app:popupTheme="@style/ThemeOverlay.AppCompat.Light"/>
-    <include layout="@layout/view_waypoint"
-        android:id="@+id/waypoints_origin"/>
     <android.support.v7.widget.RecyclerView
       android:id="@+id/waypoints_list"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:layout_below="@id/waypoints_origin"
+      android:layout_below="@id/waypoints_toolbar"
       android:scrollbars="vertical"
       app:layoutManager="android.support.v7.widget.LinearLayoutManager"/>
 

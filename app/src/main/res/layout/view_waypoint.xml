@@ -9,6 +9,10 @@
   android:layout_height="wrap_content"
   app:cardPreventCornerOverlap="true"
   app:cardUseCompatPadding="true"
+  android:layout_marginLeft="@dimen/activity_horizontal_margin"
+  android:layout_marginRight="@dimen/activity_horizontal_margin"
+  android:layout_marginTop="@dimen/card_vertical_margin"
+  android:layout_marginBottom="@dimen/card_vertical_margin"
   app:contentPaddingLeft="@dimen/card_horizontal_margin"
   app:contentPaddingRight="@dimen/card_horizontal_margin"
   app:contentPaddingTop="@dimen/card_vertical_margin"
@@ -26,27 +30,16 @@
         android:inputType="text"
         android:hint="@string/waypoint_label"/>
     </android.support.design.widget.TextInputLayout>
-    <TextSwitcher
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/card_horizontal_margin"
-      android:inAnimation="@android:anim/slide_in_left"
-      android:outAnimation="@android:anim/slide_out_right">
       <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/card_vertical_margin"
         android:textAppearance="?android:textAppearanceSmall"
         android:textStyle="italic"/>
-      <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:textAppearanceSmall"
-        android:textStyle="italic"/>
-    </TextSwitcher>
     <LinearLayout
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:layout_marginTop="@dimen/card_horizontal_margin">
+      android:layout_marginTop="@dimen/card_vertical_margin">
       <ImageSwitcher
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -85,11 +78,4 @@
       </ImageSwitcher>
     </LinearLayout>
   </LinearLayout>
-  <TextView
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:gravity="center_horizontal"
-    android:text="@string/waypoint_origin"
-    android:textAppearance="?android:attr/textAppearanceButton"
-    android:visibility="gone"/>
 </android.support.v7.widget.CardView>

@@ -5,14 +5,10 @@ import android.content.SharedPreferences.Editor;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
-import android.util.ArraySet;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageSwitcher;
-import android.widget.LinearLayout;
-import android.widget.TextSwitcher;
 import android.widget.TextView;
 import com.google.android.gms.location.places.Place;
 import java.io.IOException;
@@ -20,7 +16,6 @@ import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -44,7 +39,6 @@ public class WaypointsAdapter
   public static final String JSON_ATTRIBUTIONS = "attributions";
 
   private List<SerializablePlace> points;
-  private CardView originView;
   private SharedPreferences sharedPreferences;
   private SortedSet<String> unusedFavorites;
 
@@ -54,17 +48,11 @@ public class WaypointsAdapter
     }
   }
 
-  public void setOriginView(CardView originView) {
-    this.originView = originView;
-  }
-
   public void setSharedPreferences(SharedPreferences sharedPreferences) {
     this.sharedPreferences = sharedPreferences;
-    if (sharedPreferences.contains(PREFS_ORIGIN)) {
+    if (sharedPreferences.contains(PREFS_ORIGIN) && points.size() == 0) {
       try {
-        if (points.size() == 0) {
-          points.add(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
-        }
+        points.add(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
       } catch (IllegalArgumentException e) {
         Log.e("LOAD ORIGIN", e.toString());
       }
@@ -81,55 +69,32 @@ public class WaypointsAdapter
 
   @Override
   public void onBindViewHolder(WaypointsAdapter.ViewHolder holder, int position) {
-    holder.set(points.get(position + 1),
-        points.get(position + 1).isFavorite(sharedPreferences) != null);
+    SerializablePlace current = points.get(position);
+    holder.setData(current);
+    holder.setSpecifics(
+        current.isFavorite(sharedPreferences) != null,
+        position == 0,
+        isOriginLocked());
   }
 
   @Override
   public int getItemCount() {
-    if (points.size() == 0) {
-      return 0;
-    } else {
-      return points.size() - 1;
-    }
+    return points.size();
   }
 
   public void addWaypoint(Place place) {
-    points.add(new SerializablePlace(place));
-    if (points.size() == 1) {
-      redrawOrigin(true);
-    } else {
-      notifyItemInserted(points.size() - 2);
+    SerializablePlace p = new SerializablePlace(place);
+    if (!points.contains(p)) {
+      points.add(p);
+      notifyItemInserted(points.size() - 1);
     }
   }
 
   public void removeWaypoint(int adapterPosition) {
-    points.remove(adapterPosition + 1);
+    points.remove(adapterPosition);
     notifyItemRemoved(adapterPosition);
-  }
-
-  public void redrawOrigin(boolean fieldsChanged) {
-    LinearLayout placeLayout = (LinearLayout) originView.getChildAt(0);
-    TextInputLayout labelView = (TextInputLayout) placeLayout.getChildAt(0);
-    TextSwitcher detailsView = (TextSwitcher) placeLayout.getChildAt(1);
-    LinearLayout buttonLayout = (LinearLayout) placeLayout.getChildAt(2);
-    ImageSwitcher lockButton = (ImageSwitcher) buttonLayout.getChildAt(0);
-    ImageSwitcher favoriteButton = (ImageSwitcher) buttonLayout.getChildAt(1);
-    if (points.size() > 0) {
-      originView.getChildAt(1).setVisibility(View.GONE);
-      placeLayout.setVisibility(View.VISIBLE);
-      if (fieldsChanged) {
-        labelView.getEditText().setText(points.get(0).getLabel());
-        detailsView.setText(points.get(0).getDetails());
-      }
-      lockButton.setImageResource(isOriginLocked() ?
-          R.drawable.ic_lock_24px : R.drawable.ic_lock_open_24px);
-      favoriteButton.setImageResource(points.get(0).isFavorite(sharedPreferences) != null ?
-          R.drawable.ic_star_24px : R.drawable.ic_star_border_24px);
-      Log.d("ISORIGINLOCKED", String.valueOf(isOriginLocked()));
-    } else {
-      originView.getChildAt(1).setVisibility(View.VISIBLE);
-      placeLayout.setVisibility(View.GONE);
+    if (adapterPosition == 0) {
+      notifyItemChanged(0);
     }
   }
 
@@ -159,22 +124,23 @@ public class WaypointsAdapter
   }
 
   private void readObjectNoData() throws ObjectStreamException {
-    points = new ArrayList<>(12);
+    points = new ArrayList<>(MAXIMUM_WAYPOINTS + 1);
   }
 
   public void makeOrigin(int index) {
     SerializablePlace o = points.get(0);
     points.set(0, points.get(index));
     points.set(index, o);
-    notifyItemChanged(index-1);
-    redrawOrigin(true);
+    notifyItemChanged(0);
+    notifyItemChanged(index);
   }
 
   public boolean isOriginLocked() {
     boolean locked = false;
     try {
       locked = sharedPreferences.contains(PREFS_ORIGIN)
-          && points.get(0).isSameAs(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
+          && points.get(0).isSameAs(
+              new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
     } catch (IllegalArgumentException e) {
       Log.e("LOAD ORIGIN", e.toString());
     }
@@ -183,22 +149,21 @@ public class WaypointsAdapter
 
   public void lockOrigin() {
     Editor e = sharedPreferences.edit();
-    e.putString(PREFS_ORIGIN, points.get(0).toString());
+    if (isOriginLocked()) {
+      e.remove(PREFS_ORIGIN);
+    } else {
+      e.putString(PREFS_ORIGIN, points.get(0).toString());
+    }
     e.apply();
-    redrawOrigin(false);
-  }
-
-  public void unlockOrigin() {
-    Editor e = sharedPreferences.edit();
-    e.remove(PREFS_ORIGIN);
-    e.apply();
-    redrawOrigin(false);
+    notifyItemChanged(0);
   }
 
   public void makeFavorite(int index) {
     Editor e = sharedPreferences.edit();
     SerializablePlace current = points.get(index);
-    Set<String> favs = new HashSet<>(sharedPreferences.getStringSet(PREFS_FAVORITES, new HashSet<String>()));
+    Set<String> favs = new HashSet<>(
+        sharedPreferences.getStringSet(PREFS_FAVORITES, new HashSet<String>())
+    );
     String savedString = current.isFavorite(sharedPreferences);
     if (savedString != null) {
       favs.remove(savedString);
@@ -207,15 +172,13 @@ public class WaypointsAdapter
     }
     e.putStringSet(PREFS_FAVORITES, favs);
     e.apply();
-    if (index < 1) {
-      redrawOrigin(false);
-    } else {
-      notifyItemChanged(index - 1);
-    }
+    notifyItemChanged(index);
   }
 
   public SortedSet<String> getUnusedFavorites() {
-    unusedFavorites = new TreeSet<>(sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>()));
+    unusedFavorites = new TreeSet<>(
+        sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>())
+    );
     for (String f : sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>())) {
       for (SerializablePlace p : points) {
         if (p.isSameAs(new SerializablePlace(f))) {
@@ -242,10 +205,6 @@ public class WaypointsAdapter
         }
       }
     }
-    if (insertedIndices.size() > 0 && insertedIndices.get(0) == 0) {
-      redrawOrigin(true);
-      insertedIndices.remove(0);
-    }
     if (insertedIndices.size() > 0) {
       int first = insertedIndices.get(0);
       notifyItemRangeInserted(first, insertedIndices.get(insertedIndices.size()-1) - (first-1));
@@ -254,36 +213,55 @@ public class WaypointsAdapter
   }
 
   public void reorder(byte[] shortestRoute) {
-    ArrayList<SerializablePlace> newOrder = new ArrayList<>(MAXIMUM_WAYPOINTS);
-    for (int i = 0; i < shortestRoute.length; i++) {
-      newOrder.add(points.get(shortestRoute[i]));
+    ArrayList<SerializablePlace> newOrder = new ArrayList<>(MAXIMUM_WAYPOINTS + 1);
+    newOrder.add(points.get(0));
+    for (byte p : shortestRoute) {
+      newOrder.add(points.get(p));
     }
     points = newOrder;
     notifyDataSetChanged();
   }
 
   public static class ViewHolder extends RecyclerView.ViewHolder {
+    private CardView root;
     private TextInputLayout label;
-    private TextSwitcher details;
+    private TextView details;
+    private ImageSwitcher origin;
     private ImageSwitcher favorite;
 
     public ViewHolder(ViewGroup itemView) {
       super(itemView);
-      ViewGroup g = (ViewGroup) itemView.getChildAt(0);
+      root = (CardView) itemView;
+      ViewGroup g = (ViewGroup) root.getChildAt(0);
       label = (TextInputLayout) g.getChildAt(0);
-      details = (TextSwitcher) g.getChildAt(1);
+      details = (TextView) g.getChildAt(1);
+      origin = (ImageSwitcher) ((ViewGroup) g.getChildAt(2)).getChildAt(0);
       favorite = (ImageSwitcher) ((ViewGroup) g.getChildAt(2)).getChildAt(1);
     }
 
-    public void set(SerializablePlace p, boolean isFavorite) {
-      if (!label.getEditText().getText().equals(p.getLabel())) {
-        label.getEditText().setText(p.getLabel());
-      }
-      if (!((TextView) details.getCurrentView()).getText().equals(p.getDetails())) {
-        details.setText(p.getDetails());
-      }
-      favorite.setImageResource(isFavorite ?
-          R.drawable.ic_star_24px : R.drawable.ic_star_border_24px);
+    public void setData(SerializablePlace p) {
+      label.getEditText().setText(p.getLabel());
+      details.setText(p.getDetails());
+    }
+
+    public void setSpecifics(boolean isFavorite, boolean isOrigin, boolean originLocked) {
+      root.setCardBackgroundColor(
+          root.getResources().getColor(
+              isOrigin ?
+                  R.color.colorAccentLight :
+                  R.color.cardview_light_background
+          )
+      );
+      origin.setImageResource(
+          isOrigin ?
+              (originLocked ? R.drawable.ic_lock_24px : R.drawable.ic_lock_open_24px) :
+              R.drawable.ic_pin_drop_24px
+      );
+      favorite.setImageResource(
+          isFavorite ?
+              R.drawable.ic_star_24px :
+              R.drawable.ic_star_border_24px
+      );
     }
   }
 

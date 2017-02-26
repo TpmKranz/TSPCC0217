@@ -46,26 +46,8 @@ import org.json.JSONObject;
 import org.tpmkranz.tsp.WaypointsAdapter.SerializablePlace;
 
 public class Waypoints extends AppCompatActivity {
-  static final int[] distances = new int[]{
-         0,  6193,  8246,   992,  1556,  5010,  4830,  2581,  4122,  5565,  2569,  1080,  4534,
-      6218,     0, 13622,  6707,  7271, 10386, 10206,  7957,  8123,  1601,  4223,  5400,  6765,
-      8489, 13800,     0,  7885,  6671,  4548,  3405,  5651,  8281, 13115, 10339,  8926, 12380,
-      1613,  7163,  7254,     0,   564,  4018,  3838,  1589,  3130,  6535,  3539,  2050,  5504,
-      1818,  7368,  6690,  1214,     0,  3454,  3274,  1025,  2566,  6740,  3744,  2255,  5709,
-      5265, 10576,  4625,  4661,  3447,     0,  1209,  2427,  5057,  9891,  7115,  5702,  9156,
-      5084, 10395,  3416,  4480,  3266,  1143,     0,  2246,  4876,  9710,  6934,  5521,  8975,
-      2838,  8149,  5665,  2234,  1020,  2429,  2249,     0,  2630,  7464,  4688,  3275,  6729,
-      4347,  8514,  8236,  3743,  2529,  5000,  4820,  2571,     0,  7829,  5053,  4784,  7698,
-      5718,  1571, 13064,  6207,  6771,  9828,  9648,  7399,  7565,     0,  3850,  4963,  5567,
-      2681,  4082, 10424,  3170,  3734,  7188,  7008,  4759,  4938,  3957,     0,  2008,  3851,
-      1161,  5618,  8904,  1650,  2214,  5668,  5488,  3239,  4780,  4927,  2157,     0,  4796,
-      4574,  6537, 12317,  5063,  5627,  9081,  8901,  6652,  7510,  5437,  3757,  3901,     0};
-  static final int n = (Double.valueOf(sqrt(distances.length))).intValue()-1;
-  static int f = 1;
-
   static final String BUNDLE_ADAPTER = "org.tpmkranz.tsp.Waypoints.listAdapter";
 
-  private CardView originView;
   private RecyclerView listView;
   private WaypointsAdapter listAdapter;
   private FloatingActionButton addFab;
@@ -117,22 +99,11 @@ public class Waypoints extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     this.setContentView(R.layout.activity_waypoints);
-    for (int i = 0; i <= n; i++) {
-      if (i == 0) {
-        f = 1;
-      } else {
-        f *= i;
-      }
-    }
 
     this.prefs = getPreferences(Context.MODE_PRIVATE);
     this.computeFab = (FloatingActionButton) findViewById(R.id.waypoints_compute_fab);
     this.addFab = (FloatingActionButton) findViewById(R.id.waypoints_add_fab);
     this.toolbar = (Toolbar) findViewById(R.id.waypoints_toolbar);
-    this.originView = (CardView) findViewById(R.id.waypoints_origin);
-    LayoutParams p = (LayoutParams) this.originView.getLayoutParams();
-    p.addRule(RelativeLayout.BELOW, R.id.waypoints_toolbar);
-    this.originView.setLayoutParams(p);
     setSupportActionBar(this.toolbar);
     this.listView = (RecyclerView) this.findViewById(R.id.waypoints_list);
     if (savedInstanceState != null) {
@@ -141,10 +112,8 @@ public class Waypoints extends AppCompatActivity {
     if (this.listAdapter == null) {
       this.listAdapter = new WaypointsAdapter();
     }
-    this.listAdapter.setOriginView(originView);
     this.listAdapter.setSharedPreferences(prefs);
     this.listView.setAdapter(listAdapter);
-    listAdapter.redrawOrigin(true);
     if (listAdapter.getItemCount() <= 1) {
       computeFab.hide();
     }
@@ -162,11 +131,12 @@ public class Waypoints extends AppCompatActivity {
       @Override
       public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
         listAdapter.removeWaypoint(viewHolder.getAdapterPosition());
-        if (listAdapter.getItemCount() <= 1 && computeFab.getVisibility() == View.VISIBLE) {
+        if (computeFab.getVisibility() == View.VISIBLE
+            && listAdapter.getItemCount() < 3) {
           computeFab.hide();
         }
-        if (listAdapter.getItemCount() < WaypointsAdapter.MAXIMUM_WAYPOINTS
-            && addFab.getVisibility() != View.VISIBLE) {
+        if (addFab.getVisibility() != View.VISIBLE
+            && listAdapter.getItemCount() <= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
           addFab.show();
         }
       }
@@ -179,11 +149,6 @@ public class Waypoints extends AppCompatActivity {
     waitForPlacePicker.setMessage(getResources().getString(R.string.waypoint_wait_map));
 
     this.requestQueue = Volley.newRequestQueue(this);
-  }
-
-  @Override
-  protected void onResume() {
-    super.onResume();
   }
 
   public void addWaypoint(View view) {
@@ -205,11 +170,12 @@ public class Waypoints extends AppCompatActivity {
     }
     if (resultCode == RESULT_OK) {
       this.listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
-      if (listAdapter.getItemCount() > 1 && computeFab.getVisibility() != View.VISIBLE) {
+      if (computeFab.getVisibility() != View.VISIBLE
+          && listAdapter.getItemCount() > 2) {
         computeFab.show();
       }
-      if (listAdapter.getItemCount() >= WaypointsAdapter.MAXIMUM_WAYPOINTS
-          && addFab.getVisibility() == View.VISIBLE) {
+      if (addFab.getVisibility() == View.VISIBLE
+          && listAdapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
         addFab.hide();
       }
     }
@@ -218,28 +184,26 @@ public class Waypoints extends AppCompatActivity {
   public void makeOrigin(View view) {
     ViewGroup card = (ViewGroup) view.getParent().getParent().getParent();
     int index = listView.getChildAdapterPosition(card);
-    if (index == RecyclerView.NO_POSITION) {
-      if (listAdapter.isOriginLocked()) {
-        listAdapter.unlockOrigin();
-      } else {
-        listAdapter.lockOrigin();
-      }
+    if (index == 0) {
+      listAdapter.lockOrigin();
     } else {
-      listAdapter.makeOrigin(index + 1);
+      listAdapter.makeOrigin(index);
     }
   }
 
   public void computeRoute(View view) {
-    if (listAdapter.getItemCount() < 2) {
+    if (listAdapter.getItemCount() < 3) {
       return;
     }
     if (waitForComputation != null) {
       waitForComputation.cancel();
     }
     waitForComputation = new ProgressDialog(this);
+    waitForComputation.setTitle(getResources().getString(R.string.waypoint_wait_title));
     waitForComputation.setMessage(getResources().getString(R.string.waypoint_wait_distances));
     waitForComputation.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
     waitForComputation.setIndeterminate(true);
+    waitForComputation.setMax(1);
     String url = "http://localhost:5000/distances/";
     JsonObjectRequest r = new JsonObjectRequest(Method.POST, url, listAdapter.toJson(),
         new DistanceResponseListener(waitForComputation, listAdapter),
@@ -259,7 +223,7 @@ public class Waypoints extends AppCompatActivity {
 
   public void makeFavorite(View view) {
     ViewGroup card = (ViewGroup) view.getParent().getParent().getParent();
-    int index = listView.getChildAdapterPosition(card) + 1;
+    int index = listView.getChildAdapterPosition(card);
     listAdapter.makeFavorite(index);
   }
 
@@ -286,6 +250,7 @@ public class Waypoints extends AppCompatActivity {
         (new BruteforceTask(dialog, adapter, distances)).execute();
       } catch (JSONException | ArrayIndexOutOfBoundsException e) {
         dialog.setIndeterminate(false);
+        dialog.setMax(0);
         dialog.setMessage(e.toString());
       }
       Log.d("RESPONSE OK", response.toString());
@@ -302,6 +267,7 @@ public class Waypoints extends AppCompatActivity {
     @Override
     public void onErrorResponse(VolleyError error) {
       dialog.setIndeterminate(false);
+      dialog.setMax(0);
       dialog.setMessage(error.toString());
       Log.d("RESPONSE ERROR", error.toString());
     }
@@ -357,31 +323,32 @@ public class Waypoints extends AppCompatActivity {
     public void onClick(DialogInterface dialog, int which) {
       if (which == DialogInterface.BUTTON_POSITIVE) {
         Set<SerializablePlace> uninserted = adapter.addFavorites(choices);
-        if (adapter.getItemCount() > 1) {
+        if (compute.getVisibility() != View.VISIBLE
+            && adapter.getItemCount() > 2) {
           compute.show();
         }
-        if (adapter.getItemCount() >= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
+        if (add.getVisibility() == View.VISIBLE
+            && adapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
           add.hide();
         }
 
-        StringBuilder b = new StringBuilder();
-        int index = 0;
-        for (SerializablePlace p : uninserted) {
-          b.append(p.getLabel());
-          if (++index < uninserted.size()) {
-            b.append(", ");
+        if (uninserted.size() > 0) {
+          StringBuilder b = new StringBuilder();
+          int index = 0;
+          for (SerializablePlace p : uninserted) {
+            b.append(p.getLabel());
+            if (++index < uninserted.size()) {
+              b.append(", ");
+            }
           }
-        }
-        if (index == 1) {
-          Toast.makeText(add.getContext(), String.format(add.getResources().getString(
-              R.string.waypoints_action_favorite_add_uninserted_s), b.toString()),
-              Toast.LENGTH_LONG)
-              .show();
-        } else if (index > 1) {
-          Toast.makeText(add.getContext(), String.format(add.getResources().getString(
-              R.string.waypoints_action_favorite_add_uninserted_p), b.toString()),
-              Toast.LENGTH_LONG)
-              .show();
+          Toast.makeText(add.getContext(),
+              String.format(add.getResources().getString(
+                  index == 1 ?
+                      R.string.waypoints_action_favorite_add_uninserted_s :
+                      R.string.waypoints_action_favorite_add_uninserted_p
+              ), b.toString()),
+              Toast.LENGTH_LONG
+          ).show();
         }
       }
     }
