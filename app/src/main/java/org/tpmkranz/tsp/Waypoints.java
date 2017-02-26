@@ -1,7 +1,5 @@
 package org.tpmkranz.tsp;
 
-import static java.lang.Math.sqrt;
-
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -12,7 +10,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AlertDialog.Builder;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
@@ -21,9 +18,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.RelativeLayout;
-import android.widget.RelativeLayout.LayoutParams;
 import android.widget.Toast;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
@@ -78,11 +74,17 @@ public class Waypoints extends AppCompatActivity {
           items[index++] = p.getLabel();
         }
         Set<Integer> choices = new HashSet<>();
-        builder.setMultiChoiceItems(items, null, new OnMultiFavoriteClickListener(choices));
+        builder.setMultiChoiceItems(items, null, new OnMultiChoiceFavoriteListener(choices));
         builder.setNegativeButton(R.string.waypoints_action_favorite_cancel, null);
         builder.setPositiveButton(R.string.waypoints_action_favorite_add,
-            new OnFavoriteAddClickListener(choices, listAdapter, addFab, computeFab));
-        builder.create().show();
+            new OnClickAddFavoritesListener(choices, listAdapter, addFab, computeFab)
+        );
+        builder.setNeutralButton(R.string.waypoints_action_favorite_invert,
+            null
+        );
+        AlertDialog d = builder.create();
+        d.setOnShowListener(new OnShowSetOnClickInvertSelectionListener(choices, listAdapter));
+        d.show();
         return true;
       default:
         return super.onOptionsItemSelected(item);
@@ -204,7 +206,7 @@ public class Waypoints extends AppCompatActivity {
     JsonObjectRequest r = new JsonObjectRequest(Method.POST, url, listAdapter.toJson(),
         new DistanceResponseListener(waitForComputation, listAdapter),
         new DistanceErrorListener(waitForComputation));
-    waitForComputation.setOnCancelListener(new OnCancelRequestListener(r));
+    waitForComputation.setOnCancelListener(new OnCancelCancelRequestListener(r));
     waitForComputation.show();
     requestQueue.add(r);
   }
@@ -269,10 +271,10 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
-  public static class OnCancelRequestListener implements DialogInterface.OnCancelListener {
+  public static class OnCancelCancelRequestListener implements DialogInterface.OnCancelListener {
     private Request request;
 
-    public OnCancelRequestListener(Request request) {
+    public OnCancelCancelRequestListener(Request request) {
       this.request = request;
     }
 
@@ -283,11 +285,11 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
-  public static class OnMultiFavoriteClickListener
+  public static class OnMultiChoiceFavoriteListener
       implements DialogInterface.OnMultiChoiceClickListener {
     private Set<Integer> choices;
 
-    public OnMultiFavoriteClickListener(Set<Integer> choices) {
+    public OnMultiChoiceFavoriteListener(Set<Integer> choices) {
       this.choices = choices;
     }
 
@@ -301,13 +303,13 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
-  public static class OnFavoriteAddClickListener implements DialogInterface.OnClickListener {
+  public static class OnClickAddFavoritesListener implements DialogInterface.OnClickListener {
     private final Set<Integer> choices;
     private final WaypointsAdapter adapter;
     private final FloatingActionButton add;
     private final FloatingActionButton compute;
 
-    public OnFavoriteAddClickListener(Set<Integer> choices, WaypointsAdapter adapter,
+    public OnClickAddFavoritesListener(Set<Integer> choices, WaypointsAdapter adapter,
         FloatingActionButton add, FloatingActionButton compute) {
       this.choices = choices;
       this.adapter = adapter;
@@ -345,6 +347,37 @@ public class Waypoints extends AppCompatActivity {
           ).show();
         }
       }
+    }
+  }
+
+  public static class OnShowSetOnClickInvertSelectionListener implements DialogInterface.OnShowListener {
+
+    private final Set<Integer> choices;
+    private final WaypointsAdapter adapter;
+
+    public OnShowSetOnClickInvertSelectionListener(Set<Integer> choices, WaypointsAdapter adapter) {
+      this.choices = choices;
+      this.adapter = adapter;
+    }
+
+    @Override
+    public void onShow(final DialogInterface dialog) {
+      ((AlertDialog)dialog).getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(
+          new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+              for (Integer i : choices) {
+                ((AlertDialog) dialog).getListView().setItemChecked(i, false);
+              }
+              Set<Integer> invertedChoices = adapter.invertUnusedFavorites(choices);
+              choices.clear();
+              choices.addAll(invertedChoices);
+              for (Integer i : choices) {
+                ((AlertDialog) dialog).getListView().setItemChecked(i, true);
+              }
+            }
+          }
+      );
     }
   }
 }

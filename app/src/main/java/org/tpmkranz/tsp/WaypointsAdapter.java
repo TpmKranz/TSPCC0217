@@ -222,6 +222,16 @@ public class WaypointsAdapter
     notifyDataSetChanged();
   }
 
+  public Set<Integer> invertUnusedFavorites(Set<Integer> choices) {
+    Set<Integer> inverted = new HashSet<>(MAXIMUM_WAYPOINTS + 1);
+    for (int i = 0; i < unusedFavorites.size(); i++) {
+      if (!choices.contains(i)) {
+        inverted.add(i);
+      }
+    }
+    return inverted;
+  }
+
   public static class ViewHolder extends RecyclerView.ViewHolder {
     private CardView root;
     private TextInputLayout label;
