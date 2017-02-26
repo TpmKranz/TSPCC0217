@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AlertDialog.Builder;
 import android.support.v7.app.AppCompatActivity;
@@ -20,7 +21,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.widget.Toast;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
 import com.android.volley.RequestQueue;
@@ -117,10 +117,10 @@ public class Waypoints extends AppCompatActivity {
     this.listAdapter.setSharedPreferences(prefs);
     this.listView.setAdapter(listAdapter);
     if (listAdapter.getItemCount() <= 2) {
-      computeFab.hide();
+      computeFab.setVisibility(View.GONE);
     }
     if (listAdapter.getItemCount() >= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-      addFab.hide();
+      addFab.setVisibility(View.GONE);
     }
 
     ItemTouchHelper.SimpleCallback callback = new SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
@@ -134,10 +134,10 @@ public class Waypoints extends AppCompatActivity {
       public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
         listAdapter.removeWaypoint(viewHolder.getAdapterPosition());
         if (listAdapter.getItemCount() <= 2) {
-          computeFab.hide();
+          computeFab.setVisibility(View.GONE);
         }
         if (listAdapter.getItemCount() <= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-          addFab.show();
+          addFab.setVisibility(View.VISIBLE);
         }
       }
     };
@@ -171,10 +171,10 @@ public class Waypoints extends AppCompatActivity {
     if (resultCode == RESULT_OK) {
       this.listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
       if (listAdapter.getItemCount() > 2) {
-        computeFab.show();
+        computeFab.setVisibility(View.VISIBLE);
       }
       if (listAdapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-        addFab.hide();
+        addFab.setVisibility(View.GONE);
       }
     }
   }
@@ -322,10 +322,10 @@ public class Waypoints extends AppCompatActivity {
       if (which == DialogInterface.BUTTON_POSITIVE) {
         Set<SerializablePlace> uninserted = adapter.addFavorites(choices);
         if (adapter.getItemCount() > 2) {
-          compute.show();
+          compute.setVisibility(View.VISIBLE);
         }
         if (adapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-          add.hide();
+          add.setVisibility(View.GONE);
         }
 
         if (uninserted.size() > 0) {
@@ -337,13 +337,12 @@ public class Waypoints extends AppCompatActivity {
               b.append(", ");
             }
           }
-          Toast.makeText(add.getContext(),
-              String.format(add.getResources().getString(
-                  index == 1 ?
-                      R.string.waypoints_action_favorite_add_uninserted_s :
-                      R.string.waypoints_action_favorite_add_uninserted_p
-              ), b.toString()),
-              Toast.LENGTH_LONG
+          Snackbar.make(
+              add,
+              index == 1 ?
+                  R.string.waypoints_action_favorite_add_uninserted_s :
+                  R.string.waypoints_action_favorite_add_uninserted_p,
+              Snackbar.LENGTH_SHORT
           ).show();
         }
       }

@@ -28,26 +28,30 @@
       app:layoutManager="android.support.v7.widget.LinearLayoutManager"
       app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
-    <android.support.design.widget.FloatingActionButton
-      android:id="@+id/waypoints_add_fab"
-      android:layout_height="wrap_content"
+    <LinearLayout
       android:layout_width="wrap_content"
-      android:layout_marginBottom="@dimen/activity_vertical_margin"
-      android:layout_marginEnd="@dimen/activity_horizontal_margin"
+      android:layout_height="wrap_content"
       android:layout_gravity="bottom|end"
-      app:fabSize="normal"
-      android:onClick="addWaypoint"
-      android:src="@drawable/ic_add_24px"/>
-
-    <android.support.design.widget.FloatingActionButton
-      android:id="@+id/waypoints_compute_fab"
-      android:layout_height="wrap_content"
-      android:layout_width="wrap_content"
-      android:layout_gravity="center_horizontal"
-      app:layout_anchor="@id/waypoints_add_fab"
-      app:layout_anchorGravity="center_horizontal"
-      app:fabSize="normal"
-      app:layout_behavior=".TopChildBottomMarginBehavior"
-      android:onClick="computeRoute"
-      android:src="@drawable/ic_navigation_24px"/>
+      android:orientation="vertical"
+      android:animateLayoutChanges="true"
+      app:layout_behavior=".MoveUpwardBehavior">
+        <android.support.design.widget.FloatingActionButton
+          android:id="@+id/waypoints_compute_fab"
+          android:layout_height="wrap_content"
+          android:layout_width="wrap_content"
+          android:layout_marginBottom="@dimen/activity_vertical_margin"
+          android:layout_marginEnd="@dimen/activity_horizontal_margin"
+          app:fabSize="normal"
+          android:onClick="computeRoute"
+          android:src="@drawable/ic_navigation_24px"/>
+        <android.support.design.widget.FloatingActionButton
+          android:id="@+id/waypoints_add_fab"
+          android:layout_height="wrap_content"
+          android:layout_width="wrap_content"
+          android:layout_marginBottom="@dimen/activity_vertical_margin"
+          android:layout_marginEnd="@dimen/activity_horizontal_margin"
+          app:fabSize="normal"
+          android:onClick="addWaypoint"
+          android:src="@drawable/ic_add_24px"/>
+    </LinearLayout>
 </android.support.design.widget.CoordinatorLayout>
