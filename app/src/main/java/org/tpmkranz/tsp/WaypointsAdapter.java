@@ -8,7 +8,7 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
-import android.widget.ImageSwitcher;
+import android.widget.ImageView;
 import android.widget.TextView;
 import com.google.android.gms.location.places.Place;
 import java.io.IOException;
@@ -250,8 +250,8 @@ public class WaypointsAdapter
     private CardView root;
     private TextInputLayout label;
     private TextView details;
-    private ImageSwitcher origin;
-    private ImageSwitcher favorite;
+    private ImageView origin;
+    private ImageView favorite;
 
     public ViewHolder(ViewGroup itemView) {
       super(itemView);
@@ -259,8 +259,8 @@ public class WaypointsAdapter
       ViewGroup g = (ViewGroup) root.getChildAt(0);
       label = (TextInputLayout) g.getChildAt(0);
       details = (TextView) g.getChildAt(1);
-      origin = (ImageSwitcher) ((ViewGroup) g.getChildAt(2)).getChildAt(0);
-      favorite = (ImageSwitcher) ((ViewGroup) g.getChildAt(2)).getChildAt(1);
+      origin = (ImageView) ((ViewGroup) g.getChildAt(2)).getChildAt(0);
+      favorite = (ImageView) ((ViewGroup) g.getChildAt(2)).getChildAt(1);
     }
 
     public void setData(SerializablePlace p) {
