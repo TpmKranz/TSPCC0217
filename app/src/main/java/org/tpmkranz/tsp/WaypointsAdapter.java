@@ -91,9 +91,15 @@ public class WaypointsAdapter
   }
 
   public void removeWaypoint(int adapterPosition) {
+    boolean wasOriginLocked = isOriginLocked();
     points.remove(adapterPosition);
     notifyItemRemoved(adapterPosition);
     if (adapterPosition == 0) {
+      if (wasOriginLocked) {
+        Editor e = sharedPreferences.edit();
+        e.remove(PREFS_ORIGIN);
+        e.apply();
+      }
       notifyItemChanged(0);
     }
   }
@@ -230,6 +236,14 @@ public class WaypointsAdapter
       }
     }
     return inverted;
+  }
+
+  public void empty() {
+    int end = isOriginLocked() ? 1 : 0;
+    for (int i = points.size() - 1; i >= end; i--) {
+      points.remove(i);
+      notifyItemRemoved(i);
+    }
   }
 
   public static class ViewHolder extends RecyclerView.ViewHolder {

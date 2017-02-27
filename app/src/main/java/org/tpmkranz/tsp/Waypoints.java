@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
@@ -21,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.Toast;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
 import com.android.volley.RequestQueue;
@@ -52,7 +54,8 @@ public class Waypoints extends AppCompatActivity {
   private ProgressDialog waitForComputation;
   private SharedPreferences prefs;
   private RequestQueue requestQueue;
-  private Toolbar toolbar;
+  private static Snackbar snackbar;
+  private static boolean hints = true;
 
   @Override
   protected void onSaveInstanceState(Bundle outState) {
@@ -67,7 +70,6 @@ public class Waypoints extends AppCompatActivity {
         AlertDialog.Builder builder = new Builder(this);
         SortedSet<String> favs = listAdapter.getUnusedFavorites();
         CharSequence[] items = new CharSequence[favs.size()];
-        boolean[] checked = new boolean[favs.size()];
         int index = 0;
         for (String f : favs) {
           SerializablePlace p = new SerializablePlace(f);
@@ -75,16 +77,40 @@ public class Waypoints extends AppCompatActivity {
         }
         Set<Integer> choices = new HashSet<>();
         builder.setMultiChoiceItems(items, null, new OnMultiChoiceFavoriteListener(choices));
-        builder.setNegativeButton(R.string.waypoints_action_favorite_cancel, null);
         builder.setPositiveButton(R.string.waypoints_action_favorite_add,
             new OnClickAddFavoritesListener(choices, listAdapter, addFab, computeFab)
         );
-        builder.setNeutralButton(R.string.waypoints_action_favorite_invert,
-            null
-        );
+        builder.setNeutralButton(R.string.waypoints_action_favorite_invert, null);
         AlertDialog d = builder.create();
         d.setOnShowListener(new OnShowSetOnClickInvertSelectionListener(choices, listAdapter));
         d.show();
+        return true;
+      case R.id.waypoints_action_hints:
+        SharedPreferences.Editor e = prefs.edit();
+        hints = !hints;
+        e.putBoolean(getString(R.string.preferences_hints), hints);
+        e.apply();
+        item.setIcon(
+            hints ?
+                R.drawable.ic_info_white_48px :
+                R.drawable.ic_no_info_white_48px
+        ).setTitle(
+            hints ?
+                R.string.waypoints_action_hints_disable :
+                R.string.waypoints_action_hints_enable
+        );
+        if (snackbar != null) {
+          if (hints && !snackbar.isShown()) {
+            showHint(listAdapter);
+          } else if (!hints && snackbar.isShown()) {
+            snackbar.dismiss();
+          }
+        }
+        return true;
+      case R.id.waypoints_action_empty:
+        listAdapter.empty();
+        showButtons(listAdapter, computeFab, addFab);
+        showHint(listAdapter);
         return true;
       default:
         return super.onOptionsItemSelected(item);
@@ -94,6 +120,19 @@ public class Waypoints extends AppCompatActivity {
   @Override
   public boolean onPrepareOptionsMenu(Menu menu) {
     getMenuInflater().inflate(R.menu.menu_waypoints, menu);
+    menu.findItem(R.id.waypoints_action_hints)
+        .setIcon(
+            hints ?
+                R.drawable.ic_info_white_48px :
+                R.drawable.ic_no_info_white_48px
+        ).setTitle(
+            hints ?
+                R.string.waypoints_action_hints_disable :
+                R.string.waypoints_action_hints_enable
+        );
+    menu.findItem(R.id.waypoints_action_empty).setVisible(
+        listAdapter.getItemCount() > (listAdapter.isOriginLocked() ? 1 : 0)
+    );
     return true;
   }
 
@@ -105,8 +144,7 @@ public class Waypoints extends AppCompatActivity {
     this.prefs = getPreferences(Context.MODE_PRIVATE);
     this.computeFab = (FloatingActionButton) findViewById(R.id.waypoints_compute_fab);
     this.addFab = (FloatingActionButton) findViewById(R.id.waypoints_add_fab);
-    this.toolbar = (Toolbar) findViewById(R.id.waypoints_toolbar);
-    setSupportActionBar(this.toolbar);
+    setSupportActionBar((Toolbar) findViewById(R.id.waypoints_toolbar));
     this.listView = (RecyclerView) this.findViewById(R.id.waypoints_list);
     if (savedInstanceState != null) {
       this.listAdapter = (WaypointsAdapter) savedInstanceState.getSerializable(BUNDLE_ADAPTER);
@@ -116,12 +154,7 @@ public class Waypoints extends AppCompatActivity {
     }
     this.listAdapter.setSharedPreferences(prefs);
     this.listView.setAdapter(listAdapter);
-    if (listAdapter.getItemCount() <= 2) {
-      computeFab.setVisibility(View.GONE);
-    }
-    if (listAdapter.getItemCount() >= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-      addFab.setVisibility(View.GONE);
-    }
+    showButtons(this.listAdapter, this.computeFab, this.addFab);
 
     ItemTouchHelper.SimpleCallback callback = new SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
       @Override
@@ -133,22 +166,98 @@ public class Waypoints extends AppCompatActivity {
       @Override
       public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
         listAdapter.removeWaypoint(viewHolder.getAdapterPosition());
-        if (listAdapter.getItemCount() <= 2) {
-          computeFab.setVisibility(View.GONE);
-        }
-        if (listAdapter.getItemCount() <= WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-          addFab.setVisibility(View.VISIBLE);
-        }
+        showButtons(listAdapter, computeFab, addFab);
+        showHint(listAdapter);
       }
     };
     (new ItemTouchHelper(callback)).attachToRecyclerView(this.listView);
 
+    snackbar = Snackbar.make(listView, "", Snackbar.LENGTH_INDEFINITE);
+    hints = prefs.getBoolean(getString(R.string.preferences_hints), true);
+    showHint(listAdapter);
+
     this.waitForPlacePicker = new ProgressDialog(this);
-    waitForPlacePicker.setIndeterminate(true);
-    waitForPlacePicker.setCancelable(false);
-    waitForPlacePicker.setMessage(getResources().getString(R.string.waypoint_wait_map));
+    this.waitForPlacePicker.setIndeterminate(true);
+    this.waitForPlacePicker.setCancelable(false);
+    this.waitForPlacePicker.setMessage(getResources().getString(R.string.waypoint_wait_map));
 
     this.requestQueue = Volley.newRequestQueue(this);
+  }
+
+  static void showButtons(WaypointsAdapter a, FloatingActionButton cFab, FloatingActionButton aFab) {
+    int items = a.getItemCount();
+    cFab.setVisibility(items <= 2 ? View.GONE : View.VISIBLE);
+    aFab.setVisibility(items <= WaypointsAdapter.MAXIMUM_WAYPOINTS ? View.VISIBLE : View.GONE);
+    ((AppCompatActivity)cFab.getContext()).invalidateOptionsMenu();
+  }
+
+  static void showHint(WaypointsAdapter a) {
+    if (snackbar == null || !hints) {
+      return;
+    }
+    CoordinatorLayout c = (CoordinatorLayout) ((AppCompatActivity)snackbar.getContext())
+        .findViewById(R.id.activity_waypoints);
+    switch (a.getItemCount()) {
+      case 0:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_start, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 1:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_two, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 2:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_one, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 3:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_more, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 4:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_remove, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 5:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_hints, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 6:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_origin, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 7:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_pin, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 8:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_favorite, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 9:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_label, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 10:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_placeholder, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 11:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_enough, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 12:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_manage, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      case 13:
+        snackbar = Snackbar.make(c, R.string.waypoint_hint_warning, Snackbar.LENGTH_INDEFINITE);
+        snackbar.show();
+        break;
+      default:
+        snackbar.dismiss();
+        break;
+    }
   }
 
   public void addWaypoint(View view) {
@@ -169,13 +278,9 @@ public class Waypoints extends AppCompatActivity {
       waitForPlacePicker.dismiss();
     }
     if (resultCode == RESULT_OK) {
-      this.listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
-      if (listAdapter.getItemCount() > 2) {
-        computeFab.setVisibility(View.VISIBLE);
-      }
-      if (listAdapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-        addFab.setVisibility(View.GONE);
-      }
+      listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
+      showButtons(listAdapter, computeFab, addFab);
+      showHint(listAdapter);
     }
   }
 
@@ -184,6 +289,7 @@ public class Waypoints extends AppCompatActivity {
     int index = listView.getChildAdapterPosition(card);
     if (index == 0) {
       listAdapter.lockOrigin();
+      invalidateOptionsMenu();
     } else {
       listAdapter.makeOrigin(index);
     }
@@ -321,12 +427,8 @@ public class Waypoints extends AppCompatActivity {
     public void onClick(DialogInterface dialog, int which) {
       if (which == DialogInterface.BUTTON_POSITIVE) {
         Set<SerializablePlace> uninserted = adapter.addFavorites(choices);
-        if (adapter.getItemCount() > 2) {
-          compute.setVisibility(View.VISIBLE);
-        }
-        if (adapter.getItemCount() > WaypointsAdapter.MAXIMUM_WAYPOINTS) {
-          add.setVisibility(View.GONE);
-        }
+        showButtons(adapter, compute, add);
+        showHint(adapter);
 
         if (uninserted.size() > 0) {
           StringBuilder b = new StringBuilder();
@@ -337,13 +439,12 @@ public class Waypoints extends AppCompatActivity {
               b.append(", ");
             }
           }
-          Snackbar.make(
-              add,
-              index == 1 ?
+          Toast.makeText(compute.getContext(), compute.getContext().getString(
+              uninserted.size() == 1 ?
                   R.string.waypoints_action_favorite_add_uninserted_s :
                   R.string.waypoints_action_favorite_add_uninserted_p,
-              Snackbar.LENGTH_SHORT
-          ).show();
+              b.toString()
+          ), Toast.LENGTH_LONG).show();
         }
       }
     }

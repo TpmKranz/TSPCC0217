@@ -24,6 +24,7 @@ public class MoveUpwardBehavior extends CoordinatorLayout.Behavior<View> {
   @Override
   public boolean onDependentViewChanged(CoordinatorLayout parent, View child, View dependency) {
     float translationY = Math.min(0, ViewCompat.getTranslationY(dependency) - dependency.getHeight());
+    ViewCompat.animate(child).cancel();
     ViewCompat.setTranslationY(child, translationY);
     return true;
   }
