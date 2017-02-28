@@ -47,7 +47,7 @@ public class SolvedWaypoints extends AppCompatActivity {
         listView,
         getString(R.string.solved_route, (listAdapter.distance() + 30) / 60),
         Snackbar.LENGTH_INDEFINITE)
-        .setAction(R.string.solved_route_open, new OnClickOpenInBrowserLister(listAdapter.toOsrmRouteUrl()))
+        .setAction(R.string.solved_route_open, new OnClickOpenInBrowserListener(listAdapter.toOsrmRouteUrl()))
         .show();
   }
 
@@ -55,7 +55,7 @@ public class SolvedWaypoints extends AppCompatActivity {
   /**
    * Launches an {@link Intent} for opening a URL.
    */
-  public static class OnClickOpenInBrowserLister implements OnClickListener {
+  public static class OnClickOpenInBrowserListener implements OnClickListener {
     private final String url;
 
     /**
@@ -63,7 +63,7 @@ public class SolvedWaypoints extends AppCompatActivity {
      *
      * @param url the URL that should be opened on clicking
      */
-    public OnClickOpenInBrowserLister(String url) {
+    public OnClickOpenInBrowserListener(String url) {
       this.url = url;
     }
 

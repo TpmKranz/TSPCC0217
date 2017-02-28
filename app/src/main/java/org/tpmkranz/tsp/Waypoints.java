@@ -43,10 +43,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.tpmkranz.tsp.WaypointsAdapter.SerializablePlace;
 
+/**
+ * Main activity, used for gathering the list of waypoints.
+ */
 public class Waypoints extends AppCompatActivity {
   static final String BUNDLE_ADAPTER = "org.tpmkranz.tsp.Waypoints.listAdapter";
   static final String BUNDLE_PATH = "org.tpmkranz.tsp.Waypoints.path";
-  public static final String BUNDLE_DISTANCES = "org.tpmkranz.tsp.Waypoints.distances";
+  static final String BUNDLE_DISTANCES = "org.tpmkranz.tsp.Waypoints.distances";
 
   private RecyclerView listView;
   private WaypointsAdapter listAdapter;
@@ -60,9 +63,84 @@ public class Waypoints extends AppCompatActivity {
   private static boolean hints = true;
 
   @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    this.setContentView(R.layout.activity_waypoints);
+
+    this.prefs = getPreferences(Context.MODE_PRIVATE);
+    this.computeFab = (FloatingActionButton) findViewById(R.id.waypoints_compute_fab);
+    this.addFab = (FloatingActionButton) findViewById(R.id.waypoints_add_fab);
+    setSupportActionBar((Toolbar) findViewById(R.id.waypoints_toolbar));
+    this.listView = (RecyclerView) this.findViewById(R.id.waypoints_list);
+    if (savedInstanceState != null) {
+      this.listAdapter = (WaypointsAdapter) savedInstanceState.getSerializable(BUNDLE_ADAPTER);
+    }
+    if (this.listAdapter == null) {
+      this.listAdapter = new WaypointsAdapter();
+    }
+    this.listAdapter.setSharedPreferences(prefs);
+    this.listView.setAdapter(listAdapter);
+    showButtons(this.listAdapter, this.computeFab, this.addFab);
+
+    ItemTouchHelper.SimpleCallback callback = new SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+      @Override
+      public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
+          RecyclerView.ViewHolder target) {
+        return false;
+      }
+
+      @Override
+      public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+        listAdapter.removeWaypoint(viewHolder.getAdapterPosition());
+        showButtons(listAdapter, computeFab, addFab);
+        showHint(listAdapter);
+      }
+    };
+    (new ItemTouchHelper(callback)).attachToRecyclerView(this.listView);
+
+    snackbar = Snackbar.make(listView, "", Snackbar.LENGTH_INDEFINITE);
+    hints = prefs.getBoolean(getString(R.string.preferences_hints), true);
+    showHint(listAdapter);
+
+    this.waitForPlacePicker = new ProgressDialog(this);
+    this.waitForPlacePicker.setIndeterminate(true);
+    this.waitForPlacePicker.setCancelable(false);
+    this.waitForPlacePicker.setMessage(getResources().getString(R.string.waypoint_wait_map));
+
+    this.requestQueue = Volley.newRequestQueue(this);
+  }
+
+  @Override
+  public boolean onPrepareOptionsMenu(Menu menu) {
+    getMenuInflater().inflate(R.menu.menu_waypoints, menu);
+    menu.findItem(R.id.waypoints_action_hints)
+        .setIcon(
+            hints ?
+                R.drawable.ic_info_white_48px :
+                R.drawable.ic_no_info_white_48px
+        ).setTitle(
+        hints ?
+            R.string.waypoints_action_hints_disable :
+            R.string.waypoints_action_hints_enable
+    );
+    menu.findItem(R.id.waypoints_action_empty).setVisible(
+        listAdapter.getItemCount() > (listAdapter.isOriginLocked() ? 1 : 0)
+    );
+    return true;
+  }
+
+  @Override
   protected void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
     outState.putSerializable(BUNDLE_ADAPTER, listAdapter);
+  }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
+    if (waitForComputation != null) {
+      waitForComputation.cancel();
+    }
   }
 
   @Override
@@ -120,86 +198,43 @@ public class Waypoints extends AppCompatActivity {
   }
 
   @Override
-  public boolean onPrepareOptionsMenu(Menu menu) {
-    getMenuInflater().inflate(R.menu.menu_waypoints, menu);
-    menu.findItem(R.id.waypoints_action_hints)
-        .setIcon(
-            hints ?
-                R.drawable.ic_info_white_48px :
-                R.drawable.ic_no_info_white_48px
-        ).setTitle(
-            hints ?
-                R.string.waypoints_action_hints_disable :
-                R.string.waypoints_action_hints_enable
-        );
-    menu.findItem(R.id.waypoints_action_empty).setVisible(
-        listAdapter.getItemCount() > (listAdapter.isOriginLocked() ? 1 : 0)
-    );
-    return true;
-  }
-
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    this.setContentView(R.layout.activity_waypoints);
-
-    this.prefs = getPreferences(Context.MODE_PRIVATE);
-    this.computeFab = (FloatingActionButton) findViewById(R.id.waypoints_compute_fab);
-    this.addFab = (FloatingActionButton) findViewById(R.id.waypoints_add_fab);
-    setSupportActionBar((Toolbar) findViewById(R.id.waypoints_toolbar));
-    this.listView = (RecyclerView) this.findViewById(R.id.waypoints_list);
-    if (savedInstanceState != null) {
-      this.listAdapter = (WaypointsAdapter) savedInstanceState.getSerializable(BUNDLE_ADAPTER);
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (waitForPlacePicker.isShowing()) {
+      waitForPlacePicker.dismiss();
     }
-    if (this.listAdapter == null) {
-      this.listAdapter = new WaypointsAdapter();
+    if (resultCode == RESULT_OK) {
+      listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
+      showButtons(listAdapter, computeFab, addFab);
+      showHint(listAdapter);
     }
-    this.listAdapter.setSharedPreferences(prefs);
-    this.listView.setAdapter(listAdapter);
-    showButtons(this.listAdapter, this.computeFab, this.addFab);
-
-    ItemTouchHelper.SimpleCallback callback = new SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
-      @Override
-      public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
-          RecyclerView.ViewHolder target) {
-        return false;
-      }
-
-      @Override
-      public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-        listAdapter.removeWaypoint(viewHolder.getAdapterPosition());
-        showButtons(listAdapter, computeFab, addFab);
-        showHint(listAdapter);
-      }
-    };
-    (new ItemTouchHelper(callback)).attachToRecyclerView(this.listView);
-
-    snackbar = Snackbar.make(listView, "", Snackbar.LENGTH_INDEFINITE);
-    hints = prefs.getBoolean(getString(R.string.preferences_hints), true);
-    showHint(listAdapter);
-
-    this.waitForPlacePicker = new ProgressDialog(this);
-    this.waitForPlacePicker.setIndeterminate(true);
-    this.waitForPlacePicker.setCancelable(false);
-    this.waitForPlacePicker.setMessage(getResources().getString(R.string.waypoint_wait_map));
-
-    this.requestQueue = Volley.newRequestQueue(this);
   }
 
-  static void showButtons(WaypointsAdapter a, FloatingActionButton cFab, FloatingActionButton aFab) {
-    int items = a.getItemCount();
-    cFab.setVisibility(items <= 2 ? View.GONE : View.VISIBLE);
-    aFab.setVisibility(items <= WaypointsAdapter.MAXIMUM_WAYPOINTS ? View.VISIBLE : View.GONE);
-    ((AppCompatActivity)cFab.getContext()).invalidateOptionsMenu();
+  /**
+   * Shows or hides the {@link FloatingActionButton}s as necessary.
+   *
+   * @param adapter for deciding what states the buttons should be in
+   * @param compute the button for starting the route calculation
+   * @param add the button for adding a waypoint
+   */
+  protected static void showButtons(WaypointsAdapter adapter, FloatingActionButton compute, FloatingActionButton add) {
+    int items = adapter.getItemCount();
+    compute.setVisibility(items <= 2 ? View.GONE : View.VISIBLE);
+    add.setVisibility(items <= WaypointsAdapter.MAXIMUM_WAYPOINTS ? View.VISIBLE : View.GONE);
+    ((AppCompatActivity)compute.getContext()).invalidateOptionsMenu();
   }
 
-  static void showHint(WaypointsAdapter a) {
+  /**
+   * Shows user tips depending on the current number of waypoints.
+   *
+   * @param adapter for deciding which tip to show
+   */
+  protected static void showHint(WaypointsAdapter adapter) {
     if (snackbar == null || !hints) {
       return;
     }
     CoordinatorLayout c = (CoordinatorLayout) ((AppCompatActivity)snackbar.getContext())
         .findViewById(R.id.activity_waypoints);
-    switch (a.getItemCount()) {
+    switch (adapter.getItemCount()) {
       case 0:
         snackbar = Snackbar.make(c, R.string.waypoint_hint_start, Snackbar.LENGTH_INDEFINITE);
         snackbar.show();
@@ -262,6 +297,11 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
+  /**
+   * Launches a {@link PlacePicker} for selecting a new waypoint.
+   *
+   * @param view the {@link FloatingActionButton} for adding a waypoint
+   */
   public void addWaypoint(View view) {
     PlacePicker.IntentBuilder builder = new IntentBuilder();
     try {
@@ -274,29 +314,11 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
-  @Override
-  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    if (waitForPlacePicker.isShowing()) {
-      waitForPlacePicker.dismiss();
-    }
-    if (resultCode == RESULT_OK) {
-      listAdapter.addWaypoint(PlacePicker.getPlace(data, this));
-      showButtons(listAdapter, computeFab, addFab);
-      showHint(listAdapter);
-    }
-  }
-
-  public void makeOrigin(View view) {
-    ViewGroup card = (ViewGroup) view.getParent().getParent().getParent();
-    int index = listView.getChildAdapterPosition(card);
-    if (index == 0) {
-      listAdapter.lockOrigin();
-      invalidateOptionsMenu();
-    } else {
-      listAdapter.makeOrigin(index);
-    }
-  }
-
+  /**
+   * Retrieves the distance matrix for the current list of points and starts the calculation.
+   *
+   * @param view the {@link FloatingActionButton} for starting the calculation
+   */
   public void computeRoute(View view) {
     if (listAdapter.getItemCount() <= 2) {
       return;
@@ -319,30 +341,62 @@ public class Waypoints extends AppCompatActivity {
     requestQueue.add(r);
   }
 
-  @Override
-  protected void onStop() {
-    super.onStop();
-    if (waitForComputation != null) {
-      waitForComputation.cancel();
+  /**
+   * Makes the waypoint associated with the clicked {@link View} the new starting point or locks the
+   * current one.
+   *
+   * @param view the {@link android.widget.Button} associated with the waypoint's list entry
+   */
+  public void makeOrigin(View view) {
+    ViewGroup card = (ViewGroup) view.getParent().getParent().getParent();
+    int index = listView.getChildAdapterPosition(card);
+    if (index == 0) {
+      listAdapter.lockOrigin();
+      invalidateOptionsMenu();
+    } else {
+      listAdapter.makeOrigin(index);
     }
   }
 
+  /**
+   * Adds or removes the waypoint associated with the clicked {@link View} to/from the quick access
+   * list.
+   *
+   * @param view the {@link android.widget.Button} associated with the waypoint's list entry
+   */
   public void makeFavorite(View view) {
     ViewGroup card = (ViewGroup) view.getParent().getParent().getParent();
     int index = listView.getChildAdapterPosition(card);
     listAdapter.makeFavorite(index);
   }
 
+  /**
+   * Awaits the distance matrix response requested in {@link #computeRoute(View)} and sets the
+   * calculation in motion.
+   */
   public static class DistanceResponseListener implements Response.Listener<JSONObject> {
     private ProgressDialog dialog;
     private WaypointsAdapter adapter;
 
+    /**
+     * Initializes the {@link Response.Listener} with the associated {@link ProgressDialog} and the
+     * {@link WaypointsAdapter} for future use.
+     *
+     * @param dialog the dialog indicating that a network operation is pending
+     * @param adapter the adapter that's going to be passed to the {@link BruteforceTask}
+     */
     public DistanceResponseListener(ProgressDialog dialog, WaypointsAdapter adapter) {
       this.dialog = dialog;
       this.adapter = adapter;
     }
 
 
+    /**
+     * Tries to launch the calculation.
+     *
+     * @param response the received <a href="http://project-osrm.org/docs/v5.6.0/api/#table-service">
+     *   distance matrix</a>
+     */
     @Override
     public void onResponse(JSONObject response) {
       try {
@@ -363,13 +417,27 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
+  /**
+   * Reacts to errors that may happen while retrieving the distance matrix.
+   */
   public static class DistanceErrorListener implements Response.ErrorListener {
     private ProgressDialog dialog;
 
+    /**
+     * Initializes the {@link com.android.volley.Response.ErrorListener} with the associated
+     * {@link ProgressDialog}.
+     *
+     * @param dialog the dialog indicating that a network operation is pending
+     */
     public DistanceErrorListener(ProgressDialog dialog) {
       this.dialog = dialog;
     }
 
+    /**
+     * Displays the error message in the dialog.
+     *
+     * @param error the error object for the error that occurred
+     */
     @Override
     public void onErrorResponse(VolleyError error) {
       dialog.setIndeterminate(false);
@@ -379,9 +447,18 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
+  /**
+   * Cancels the network request if the associated {@link ProgressDialog} gets cancelled.
+   */
   public static class OnCancelCancelRequestListener implements DialogInterface.OnCancelListener {
     private Request request;
 
+    /**
+     * Initializes the {@link android.content.DialogInterface.OnCancelListener} with the
+     * {@link Request} that would be cancelled.
+     *
+     * @param request the request to be cancelled on dialog cancellation
+     */
     public OnCancelCancelRequestListener(Request request) {
       this.request = request;
     }
@@ -393,14 +470,30 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
+  /**
+   * Keeps track of the set of quick access items the user wishes to add to add to the list.
+   */
   public static class OnMultiChoiceFavoriteListener
       implements DialogInterface.OnMultiChoiceClickListener {
     private Set<Integer> choices;
 
+    /**
+     * Initializes the {@link DialogInterface.OnMultiChoiceClickListener} with the {@link Set} where
+     * the checked items will be recorded.
+     *
+     * @param choices the set of checked items
+     */
     public OnMultiChoiceFavoriteListener(Set<Integer> choices) {
       this.choices = choices;
     }
 
+    /**
+     * Adds or removes an item to/from the set of checked items.
+     *
+     * @param dialog where the list is being displayed
+     * @param which the item to be added/removed
+     * @param isChecked the current state of the item
+     */
     @Override
     public void onClick(DialogInterface dialog, int which, boolean isChecked) {
       if (isChecked) {
@@ -411,12 +504,26 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
+  /**
+   * Adds the checked quick access items to the list of waypoints when the 'add' button has been
+   * clicked.
+   */
   public static class OnClickAddFavoritesListener implements DialogInterface.OnClickListener {
     private final Set<Integer> choices;
     private final WaypointsAdapter adapter;
     private final FloatingActionButton add;
     private final FloatingActionButton compute;
 
+    /**
+     * Initializes the {@link android.content.DialogInterface.OnClickListener} with a reference to
+     * the {@link Set} of checked items and the UI objects that could be affected by adding
+     * waypoints.
+     *
+     * @param choices the set of checked items
+     * @param adapter the {@link WaypointsAdapter} for adding the items to the list
+     * @param add the {@link FloatingActionButton} associated with adding waypoints for future use
+     * @param compute the {@link FloatingActionButton} associated with the calculation for future use
+     */
     public OnClickAddFavoritesListener(Set<Integer> choices, WaypointsAdapter adapter,
         FloatingActionButton add, FloatingActionButton compute) {
       this.choices = choices;
@@ -425,6 +532,12 @@ public class Waypoints extends AppCompatActivity {
       this.compute = compute;
     }
 
+    /**
+     * Adds the waypoints to the {@link WaypointsAdapter} and updates UI elements.
+     *
+     * @param dialog where the clicked button lives
+     * @param which which button was clicked (in this case {@link DialogInterface#BUTTON_POSITIVE})
+     */
     @Override
     public void onClick(DialogInterface dialog, int which) {
       if (which == DialogInterface.BUTTON_POSITIVE) {
@@ -452,16 +565,36 @@ public class Waypoints extends AppCompatActivity {
     }
   }
 
+  /**
+   * Applies an {@link android.content.DialogInterface.OnClickListener} to the neutral button once
+   * the dialog has been shown.
+   *
+   * <p>A hack for making a {@link AlertDialog} button non-dismissive, courtesy of
+   * <a href="http://stackoverflow.com/a/7636468">Tom Bollwitt and Dmitry Ryadnenko</a>.
+   */
   public static class OnShowSetOnClickInvertSelectionListener implements DialogInterface.OnShowListener {
-
     private final Set<Integer> choices;
     private final WaypointsAdapter adapter;
 
+    /**
+     * Initializes the {@link android.content.DialogInterface.OnShowListener} with a reference to
+     * the {@link Set} of checked items.
+     * 
+     * @param choices the set of checked items that'll be inverted
+     * @param adapter the {@link WaypointsAdapter} for getting the complementary items
+     */
     public OnShowSetOnClickInvertSelectionListener(Set<Integer> choices, WaypointsAdapter adapter) {
       this.choices = choices;
       this.adapter = adapter;
     }
 
+    /**
+     * Applies the {@link android.content.DialogInterface.OnClickListener} to the button.
+     *
+     * <p>The listener will invert the set of clicked items once triggered.
+     *
+     * @param dialog which dialog is being shown
+     */
     @Override
     public void onShow(final DialogInterface dialog) {
       ((AlertDialog)dialog).getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(
