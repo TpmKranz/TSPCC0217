@@ -22,7 +22,7 @@
 
     <meta-data
       android:name="com.google.android.geo.API_KEY"
-      android:value="AIzaSyB_-Tb_MjEnj9tRmZkwFKX49CmD_EfApvc"/>
+      android:value="${apiKey}"/>
 
     <activity android:name=".SolvedWaypoints">
     </activity>
