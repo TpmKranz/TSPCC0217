@@ -11,6 +11,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+/**
+ * AsyncTask that finds the optimal route through a given distance matrix using multithreading.
+ */
 public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
 
   private final ProgressDialog progressDialog;
@@ -22,6 +25,13 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
   private final int n;
   private final int[] factorials;
 
+  /**
+   * Initializes the task with all the necessary data.
+   *
+   * @param progress a dialog to publish the calculation progress to
+   * @param adapter the {@link WaypointsAdapter} for later use
+   * @param distances the distance matrix
+   */
   public BruteforceTask(ProgressDialog progress, WaypointsAdapter adapter, int[][] distances) {
     this.progressDialog = progress;
     this.listAdapter = adapter;
@@ -48,6 +58,9 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
     }
   }
 
+  /**
+   * Prepares the dialog for displaying the progress.
+   */
   @Override
   protected void onPreExecute() {
     progressDialog.setMax(factorials[n]);
@@ -56,6 +69,13 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
     progressDialog.setOnCancelListener(new OnCancelStopAsyncTaskListener(this));
   }
 
+  /**
+   * Submits all the {@link BruteforceInterval}s to the {@link ExecutorService} and monitors their
+   * progress.
+   *
+   * @param params nothing, tbh
+   * @return the shortest route through the distance matrix
+   */
   @Override
   protected byte[] doInBackground(Void... params) {
     Future<byte[]>[] futures = new Future[numberOfForces];
@@ -85,17 +105,32 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
     }
   }
 
+  /**
+   * Updates the dialog every time a task finishes.
+   *
+   * @param finishedForces number of tasks finished so far
+   */
   @Override
   protected void onProgressUpdate(Integer... finishedForces) {
     progressDialog.setIndeterminate(false);
     progressDialog.setProgress(finishedForces[0]*(factorials[n]/numberOfForces));
   }
 
+  /**
+   * Dismisses the dialog on task cancellation.
+   *
+   * @param bytes not used
+   */
   @Override
   protected void onCancelled(byte[] bytes) {
     progressDialog.dismiss();
   }
 
+  /**
+   * Displays the optimal route in a new activity once all tasks have finished.
+   *
+   * @param shortestRoute the optimal route
+   */
   @Override
   protected void onPostExecute(byte[] shortestRoute) {
     progressDialog.dismiss();
@@ -106,10 +141,23 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
     progressDialog.getContext().startActivity(intent);
   }
 
+  /**
+   * Calculates the distance for a given route.
+   *
+   * @param route the route to calculate the distance for
+   * @return the sum of the distances in between points
+   */
   int distance(byte[] route) {
     return distance(this.distances, route);
   }
 
+  /**
+   * Calculates the distance for a given route through a given distance matrix.
+   *
+   * @param distances the flattened distance matrix
+   * @param route the route to calculate the distance for
+   * @return the sum of the distances in between points
+   */
   public static int distance(int[] distances, byte[] route) {
     int distance = distances[route[0]];
     int n = route.length;
@@ -122,10 +170,18 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
     return distance;
   }
 
+  /**
+   * Stops a running {@link AsyncTask} if the {@link android.app.Dialog} gets cancelled.
+   */
   public static class OnCancelStopAsyncTaskListener implements DialogInterface.OnCancelListener {
 
     private AsyncTask<?, ?, ?> task;
 
+    /**
+     * Initializes the listener with the task to stop on cancellation.
+     *
+     * @param task the task to stop
+     */
     public OnCancelStopAsyncTaskListener(AsyncTask<?,?,?> task) {
       this.task = task;
     }
