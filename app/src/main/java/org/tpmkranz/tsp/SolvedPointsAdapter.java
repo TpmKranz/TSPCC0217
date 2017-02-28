@@ -10,6 +10,9 @@ import java.io.Serializable;
 import java.util.Locale;
 import org.tpmkranz.tsp.WaypointsAdapter.SerializablePlace;
 
+/**
+ * Maintains the list of waypoints and their ideal order.
+ */
 public class SolvedPointsAdapter
     extends RecyclerView.Adapter<SolvedPointsAdapter.ViewHolder>
     implements Serializable {
@@ -18,6 +21,13 @@ public class SolvedPointsAdapter
   private final byte[] path;
   private final int[][] distances;
 
+  /**
+   * Initializes the adapter with all the data it needs.
+   *
+   * @param original the original {@link WaypointsAdapter} from which to take waypoint information
+   * @param path the calculated shortest path
+   * @param distances the flattened distance matrix
+   */
   public SolvedPointsAdapter(WaypointsAdapter original, byte[] path, int[] distances) {
     this.path = path;
     this.distances = new int[path.length + 1][path.length + 1];
@@ -27,6 +37,11 @@ public class SolvedPointsAdapter
     this.points = original.points.toArray(new SerializablePlace[original.points.size()]);
   }
 
+  /**
+   * Returns the distance covered by the ideal path.
+   *
+   * @return the sum of distances between the waypoints of the path
+   */
   public int distance() {
     int[] distances = new int[this.distances.length*this.distances.length];
     for (int i = 0; i < this.distances.length; i++) {
@@ -35,6 +50,12 @@ public class SolvedPointsAdapter
     return BruteforceTask.distance(distances, path);
   }
 
+  /**
+   * Creates a URL that points to the <a href="http://project-osrm.org/">Project OSRM</a> demo
+   * routing website.
+   *
+   * @return a URL to a site that displays the ideal route
+   */
   public String toOsrmRouteUrl() {
     if (points.length < 1) {
       return "";
@@ -83,6 +104,9 @@ public class SolvedPointsAdapter
     return Integer.MAX_VALUE;
   }
 
+  /**
+   * A {@link RecyclerView.ViewHolder} for a waypoint and a distance estimate to its successor.
+   */
   public static class ViewHolder extends RecyclerView.ViewHolder {
 
     CardView point;
@@ -90,6 +114,11 @@ public class SolvedPointsAdapter
     TextView details;
     TextView distance;
 
+    /**
+     * Saves references to all the {@link View}s that are used to display data.
+     *
+     * @param itemView the {@link ViewGroup} holding the waypoint and distance displays
+     */
     public ViewHolder(View itemView) {
       super(itemView);
       point = (CardView) itemView.findViewById(R.id.solved_point_card);
@@ -98,6 +127,14 @@ public class SolvedPointsAdapter
       distance = (TextView) itemView.findViewById(R.id.solved_point_distance);
     }
 
+    /**
+     * Fills a view with the necessary information.
+     *
+     * @param index the list index of the current view
+     * @param points an array of the waypoints in original order
+     * @param path the ideal path
+     * @param distances the distance matrix
+     */
     public void setData(int index, SerializablePlace[] points, byte[] path, int[][] distances) {
       index = index % points.length;
       int pIndex = (index == 0) ? 0 : path[index-1];

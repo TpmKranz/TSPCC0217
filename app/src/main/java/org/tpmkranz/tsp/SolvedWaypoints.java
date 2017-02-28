@@ -2,14 +2,16 @@ package org.tpmkranz.tsp;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
-import android.text.format.DateUtils;
 import android.view.View;
 import android.view.View.OnClickListener;
 
+/**
+ * The activity presenting the ideal route.
+ */
 public class SolvedWaypoints extends AppCompatActivity {
 
   final static String BUNDLE_ADAPTER = "org.tpmkranz.tsp.SolvedWaypoints.listAdapter";
@@ -50,9 +52,17 @@ public class SolvedWaypoints extends AppCompatActivity {
   }
 
 
+  /**
+   * Launches an {@link Intent} for opening a URL.
+   */
   public static class OnClickOpenInBrowserLister implements OnClickListener {
     private final String url;
 
+    /**
+     * Initializes the URL to be opened.
+     *
+     * @param url the URL that should be opened on clicking
+     */
     public OnClickOpenInBrowserLister(String url) {
       this.url = url;
     }

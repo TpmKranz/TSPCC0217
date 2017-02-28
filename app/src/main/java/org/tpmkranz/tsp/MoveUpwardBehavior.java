@@ -7,6 +7,11 @@ import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.view.View;
 
+/**
+ * Moves an arbitrary view upwards if it threatens to collide with a {@link Snackbar}.
+ *
+ * <p>Courtesy of <a href="http://stackoverflow.com/a/35904421"></a>
+ */
 public class MoveUpwardBehavior extends CoordinatorLayout.Behavior<View> {
   public MoveUpwardBehavior() {
     super();
