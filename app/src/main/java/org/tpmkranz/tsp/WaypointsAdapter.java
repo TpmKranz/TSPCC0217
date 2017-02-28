@@ -5,6 +5,8 @@ import android.content.SharedPreferences.Editor;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -69,12 +71,7 @@ public class WaypointsAdapter
 
   @Override
   public void onBindViewHolder(WaypointsAdapter.ViewHolder holder, int position) {
-    SerializablePlace current = points.get(position);
-    holder.setData(current);
-    holder.setSpecifics(
-        current.isFavorite(sharedPreferences) != null,
-        position == 0,
-        isOriginLocked());
+    holder.setData(position, this);
   }
 
   @Override
@@ -252,6 +249,7 @@ public class WaypointsAdapter
     private TextView details;
     private ImageView origin;
     private ImageView favorite;
+    private TextWatcher watcher = null;
 
     public ViewHolder(ViewGroup itemView) {
       super(itemView);
@@ -263,12 +261,16 @@ public class WaypointsAdapter
       favorite = (ImageView) ((ViewGroup) g.getChildAt(2)).getChildAt(1);
     }
 
-    public void setData(SerializablePlace p) {
+    public void setData(final int index, final WaypointsAdapter adapter) {
+      SerializablePlace p = adapter.points.get(index);
+      boolean isFavorite = p.isFavorite(adapter.sharedPreferences) != null;
+      boolean isOrigin = index == 0;
+      boolean originLocked = adapter.isOriginLocked();
+      if (watcher != null) {
+        label.getEditText().removeTextChangedListener(watcher);
+      }
       label.getEditText().setText(p.getLabel());
       details.setText(p.getDetails());
-    }
-
-    public void setSpecifics(boolean isFavorite, boolean isOrigin, boolean originLocked) {
       root.setCardBackgroundColor(
           root.getResources().getColor(
               isOrigin ?
@@ -286,7 +288,44 @@ public class WaypointsAdapter
               R.drawable.ic_star_24px :
               R.drawable.ic_star_border_24px
       );
+      watcher = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+        @Override
+        public void afterTextChanged(Editable s) {
+          adapter.relabel(index, s.toString());
+        }
+      };
+      label.getEditText().addTextChangedListener(watcher);
     }
+  }
+
+  public void relabel(int index, String label) {
+    SerializablePlace p = points.get(index);
+    String favString = p.isFavorite(sharedPreferences);
+    boolean isLocked = false;
+    try {
+      isLocked = p.isSameAs(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
+    } catch (IllegalArgumentException e) {
+    }
+    p.setLabel(label);
+    Editor e = sharedPreferences.edit();
+    if (favString != null) {
+      Set<String> favs = new HashSet<>(
+          sharedPreferences.getStringSet(PREFS_FAVORITES, new HashSet<String>())
+      );
+      favs.remove(favString);
+      favs.add(p.toString());
+      e.putStringSet(PREFS_FAVORITES, favs);
+    }
+    if (isLocked) {
+      e.putString(PREFS_ORIGIN, p.toString());
+    }
+    e.apply();
   }
 
   public static class SerializablePlace implements Serializable {

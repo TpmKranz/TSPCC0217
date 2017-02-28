@@ -19,7 +19,7 @@
   <string name="waypoint_hint_two">Add at least two more points as your variable-order waypoints.</string>
   <string name="waypoint_hint_one">Add just one more waypoint. The starting point will always be color-coded.</string>
   <string name="waypoint_hint_more">Start the calculation by tapping the arrow button or add even more waypoints.</string>
-  <string name="waypoint_hint_remove">Remove a point from the list by swiping it to the side.</string>
+  <string name="waypoint_hint_remove">Remove a point from the list by swiping it to the side or remove them all at once.</string>
   <string name="waypoint_hint_hints">Dismiss tips by swiping them to the right or disable them altogether.</string>
   <string name="waypoint_hint_origin">Set a waypoint as the starting point by tapping its left button.</string>
   <string name="waypoint_hint_pin">Lock your starting point for future use by tapping its left button.</string>
