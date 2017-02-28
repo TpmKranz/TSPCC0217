@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -100,6 +101,18 @@ public class WaypointsAdapter
       }
       notifyItemChanged(0);
     }
+  }
+
+  public String toOsrmString() {
+    StringBuilder b = new StringBuilder();
+    for (int i = 0; i < points.size(); i++) {
+      SerializablePlace p = points.get(i);
+      b.append(String.format(Locale.US, "%f,%f", p.getLongitude(), p.getLatitude()));
+      if (i < points.size() - 1) {
+        b.append(";");
+      }
+    }
+    return b.toString();
   }
 
   public JSONObject toJson() {

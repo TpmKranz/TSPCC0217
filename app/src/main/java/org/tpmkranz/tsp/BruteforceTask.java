@@ -107,7 +107,12 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
   }
 
   int distance(byte[] route) {
+    return distance(this.distances, route);
+  }
+
+  public static int distance(int[] distances, byte[] route) {
     int distance = distances[route[0]];
+    int n = route.length;
     for (byte i = 0; i < n - 1; i++) {
       byte current = route[i];
       byte next = route[i+1];

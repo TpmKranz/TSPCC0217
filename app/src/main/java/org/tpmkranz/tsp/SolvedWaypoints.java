@@ -1,8 +1,14 @@
 package org.tpmkranz.tsp;
 
+import android.content.Intent;
+import android.net.Uri;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
+import android.text.format.DateUtils;
+import android.view.View;
+import android.view.View.OnClickListener;
 
 public class SolvedWaypoints extends AppCompatActivity {
 
@@ -33,8 +39,29 @@ public class SolvedWaypoints extends AppCompatActivity {
         return;
       }
     }
-    listView = (RecyclerView) findViewById(R.id.activity_solved_waypoints);
+    listView = (RecyclerView) findViewById(R.id.solved_waypoints_list);
     listView.setAdapter(listAdapter);
+    Snackbar.make(
+        listView,
+        getString(R.string.solved_route, (listAdapter.distance() + 30) / 60),
+        Snackbar.LENGTH_INDEFINITE)
+        .setAction(R.string.solved_route_open, new OnClickOpenInBrowserLister(listAdapter.toOsrmRouteUrl()))
+        .show();
   }
 
+
+  public static class OnClickOpenInBrowserLister implements OnClickListener {
+    private final String url;
+
+    public OnClickOpenInBrowserLister(String url) {
+      this.url = url;
+    }
+
+    @Override
+    public void onClick(View v) {
+      Intent intent = new Intent(Intent.ACTION_VIEW);
+      intent.setData(Uri.parse(url));
+      v.getContext().startActivity(intent);
+    }
+  }
 }

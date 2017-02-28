@@ -33,5 +33,9 @@
   <string name="waypoints_action_hints_disable">Disable hints</string>
   <string name="preferences_hints">hints</string>
   <string name="waypoints_action_empty">Empty list</string>
-  <string name="solvedpoints_distance">%d minutes</string>
+  <string name="solvedpoints_distance_s">%d minute</string>
+  <string name="solvedpoints_distance_p">%d minutes</string>
+  <string name="solved_route">Total travel time: %d minutes. You can open the route in a browser.</string>
+  <string name="solved_route_open">Open</string>
+  <string name="solvedpoints_distance_z"><![CDATA[< %d minute]]></string>
 </resources>

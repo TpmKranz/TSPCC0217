@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import java.io.Serializable;
+import java.util.Locale;
 import org.tpmkranz.tsp.WaypointsAdapter.SerializablePlace;
 
 public class SolvedPointsAdapter
@@ -25,6 +26,44 @@ public class SolvedPointsAdapter
     }
     this.points = original.points.toArray(new SerializablePlace[original.points.size()]);
   }
+
+  public int distance() {
+    int[] distances = new int[this.distances.length*this.distances.length];
+    for (int i = 0; i < this.distances.length; i++) {
+      System.arraycopy(this.distances[i], 0, distances, i * this.distances.length, this.distances.length);
+    }
+    return BruteforceTask.distance(distances, path);
+  }
+
+  public String toOsrmRouteUrl() {
+    if (points.length < 1) {
+      return "";
+    }
+
+    StringBuilder b = new StringBuilder("http://map.project-osrm.org/?z=1");
+    SerializablePlace o = points[0];
+    b.append(String.format(
+        Locale.US,
+        "&center=%f%%2C%f&loc=%f%%2C%f",
+        o.getLatitude(), o.getLongitude(),
+        o.getLatitude(), o.getLongitude()
+    ));
+    for (byte i : path) {
+      SerializablePlace p = points[i];
+      b.append(String.format(
+          Locale.US,
+          "&loc=%f%%2C%f", p.getLatitude(), p.getLongitude()
+      ));
+    }
+    b.append(String.format(
+        Locale.US,
+        "&loc=%f%%2C%f", o.getLatitude(), o.getLongitude()
+    ));
+    b.append("&hl=en&alt=0");
+
+    return b.toString();
+  }
+
 
   @Override
   public SolvedPointsAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -72,10 +111,15 @@ public class SolvedPointsAdapter
       );
       label.setText(points[pIndex].getLabel());
       details.setText(points[pIndex].getDetails());
+      int minutes = (distances[pIndex][(sIndex)%points.length] + 30) / 60;
       distance.setText(
           distance.getResources().getString(
-              R.string.solvedpoints_distance,
-              (distances[pIndex][(sIndex)%points.length] + 59) / 60
+              minutes == 0 ?
+                  R.string.solvedpoints_distance_z :
+                  (minutes == 1 ?
+                      R.string.solvedpoints_distance_s :
+                      R.string.solvedpoints_distance_p),
+              minutes == 0 ? 1 : minutes
           )
       );
     }

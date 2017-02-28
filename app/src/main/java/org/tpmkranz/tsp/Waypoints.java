@@ -310,8 +310,8 @@ public class Waypoints extends AppCompatActivity {
     waitForComputation.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
     waitForComputation.setIndeterminate(true);
     waitForComputation.setMax(1);
-    String url = "http://localhost:5000/distances/";
-    JsonObjectRequest r = new JsonObjectRequest(Method.POST, url, listAdapter.toJson(),
+    String url = "https://router.project-osrm.org/table/v1/driving/" + listAdapter.toOsrmString();
+    JsonObjectRequest r = new JsonObjectRequest(Method.POST, url, null,
         new DistanceResponseListener(waitForComputation, listAdapter),
         new DistanceErrorListener(waitForComputation));
     waitForComputation.setOnCancelListener(new OnCancelCancelRequestListener(r));
@@ -346,7 +346,7 @@ public class Waypoints extends AppCompatActivity {
     @Override
     public void onResponse(JSONObject response) {
       try {
-        JSONArray responseArray = response.getJSONArray("array");
+        JSONArray responseArray = response.getJSONArray("durations");
         int[][] distances = new int[responseArray.length()][responseArray.length()];
         for (int i = 0; i < responseArray.length(); i++) {
           for (int j = 0; j < responseArray.length(); j++) {
