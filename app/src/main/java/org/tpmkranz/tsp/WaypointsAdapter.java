@@ -27,39 +27,43 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Maintains the list of waypoints and offers access to all kinds of data about them.
+ */
 public class WaypointsAdapter
     extends RecyclerView.Adapter<WaypointsAdapter.ViewHolder>
     implements Serializable {
+
+  /** The JSON key for the starting point. */
   public static final String JSON_ORIGIN = "origin";
+  /** The JSON key for the destinations array. */
   public static final String JSON_DESTINATIONS = "destinations";
+  /** The JSON key for latitude attributes. */
   public static final String JSON_LATITUDE = "latitude";
+  /** The JSON key for longitude attributes. */
   public static final String JSON_LONGITUDE = "longitude";
+  /** The JSON key for label attributes. */
   public static final String JSON_LABEL = "label";
+  /** The JSON key for details attributes. */
   public static final String JSON_DETAILS = "details";
-  public static final int MAXIMUM_WAYPOINTS = 12;
-  public static final String PREFS_ORIGIN = "origin";
-  public static final String PREFS_FAVORITES = "favorites";
+  /** The JSON key for attributions attributes. */
   public static final String JSON_ATTRIBUTIONS = "attributions";
+
+  static final int MAXIMUM_WAYPOINTS = 12;
+  static final String PREFS_ORIGIN = "origin";
+  static final String PREFS_FAVORITES = "favorites";
 
   List<SerializablePlace> points;
 
   private SharedPreferences sharedPreferences;
   private SortedSet<String> unusedFavorites;
 
+  /**
+   * Initializes the adapter with an empty {@link ArrayList}.
+   */
   public WaypointsAdapter() {
     if (this.points == null) {
       this.points = new ArrayList<>(MAXIMUM_WAYPOINTS + 1);
-    }
-  }
-
-  public void setSharedPreferences(SharedPreferences sharedPreferences) {
-    this.sharedPreferences = sharedPreferences;
-    if (sharedPreferences.contains(PREFS_ORIGIN) && points.size() == 0) {
-      try {
-        points.add(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
-      } catch (IllegalArgumentException e) {
-        Log.e("LOAD ORIGIN", e.toString());
-      }
     }
   }
 
@@ -81,6 +85,27 @@ public class WaypointsAdapter
     return points.size();
   }
 
+  /**
+   * Attaches a {@link SharedPreferences} object to this adapter for maintaining user settings.
+   *
+   * @param sharedPreferences the preferences to attach
+   */
+  public void setSharedPreferences(SharedPreferences sharedPreferences) {
+    this.sharedPreferences = sharedPreferences;
+    if (sharedPreferences.contains(PREFS_ORIGIN) && points.size() == 0) {
+      try {
+        points.add(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
+      } catch (IllegalArgumentException e) {
+        Log.e("LOAD ORIGIN", e.toString());
+      }
+    }
+  }
+
+  /**
+   * Adds a {@link Place} to the list and animates the addition.
+   *
+   * @param place the waypoint to add
+   */
   public void addWaypoint(Place place) {
     SerializablePlace p = new SerializablePlace(place);
     if (!points.contains(p)) {
@@ -89,6 +114,11 @@ public class WaypointsAdapter
     }
   }
 
+  /**
+   * Removes a waypoint from the list and animates the removal.
+   *
+   * @param adapterPosition which waypoint to remove
+   */
   public void removeWaypoint(int adapterPosition) {
     boolean wasOriginLocked = isOriginLocked();
     points.remove(adapterPosition);
@@ -103,47 +133,22 @@ public class WaypointsAdapter
     }
   }
 
-  public String toOsrmString() {
-    StringBuilder b = new StringBuilder();
-    for (int i = 0; i < points.size(); i++) {
-      SerializablePlace p = points.get(i);
-      b.append(String.format(Locale.US, "%f,%f", p.getLongitude(), p.getLatitude()));
-      if (i < points.size() - 1) {
-        b.append(";");
-      }
+  /**
+   * Empties the list of waypoints, except for the starting point if it is locked.
+   */
+  public void empty() {
+    int end = isOriginLocked() ? 1 : 0;
+    for (int i = points.size() - 1; i >= end; i--) {
+      points.remove(i);
+      notifyItemRemoved(i);
     }
-    return b.toString();
   }
 
-  public JSONObject toJson() {
-    JSONObject representation = new JSONObject();
-    if (points.size() > 0) {
-      try {
-        representation.put(JSON_ORIGIN, points.get(0).toJson());
-        JSONArray destinations = new JSONArray();
-        for (int i = 1; i < points.size(); i++) {
-          destinations.put(points.get(i).toJson());
-        }
-        representation.put(JSON_DESTINATIONS, destinations);
-      } catch (JSONException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    return representation;
-  }
-
-  private void writeObject(java.io.ObjectOutputStream out) throws IOException {
-    out.writeObject(points);
-  }
-
-  private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
-    points = (List<SerializablePlace>) in.readObject();
-  }
-
-  private void readObjectNoData() throws ObjectStreamException {
-    points = new ArrayList<>(MAXIMUM_WAYPOINTS + 1);
-  }
-
+  /**
+   * Sets a point as the starting point and puts the former starting point in its place.
+   *
+   * @param index the point to make into the new starting point
+   */
   public void makeOrigin(int index) {
     SerializablePlace o = points.get(0);
     points.set(0, points.get(index));
@@ -152,18 +157,9 @@ public class WaypointsAdapter
     notifyItemChanged(index);
   }
 
-  public boolean isOriginLocked() {
-    boolean locked = false;
-    try {
-      locked = sharedPreferences.contains(PREFS_ORIGIN)
-          && points.get(0).isSameAs(
-              new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
-    } catch (IllegalArgumentException e) {
-      Log.e("LOAD ORIGIN", e.toString());
-    }
-    return locked;
-  }
-
+  /**
+   * Saves the current starting point in the {@link SharedPreferences}.
+   */
   public void lockOrigin() {
     Editor e = sharedPreferences.edit();
     if (isOriginLocked()) {
@@ -175,6 +171,11 @@ public class WaypointsAdapter
     notifyItemChanged(0);
   }
 
+  /**
+   * Saves a {@link SerializablePlace} to the quick access list or removes it if it's already there.
+   *
+   * @param index the point to save
+   */
   public void makeFavorite(int index) {
     Editor e = sharedPreferences.edit();
     SerializablePlace current = points.get(index);
@@ -192,20 +193,30 @@ public class WaypointsAdapter
     notifyItemChanged(index);
   }
 
-  public SortedSet<String> getUnusedFavorites() {
-    unusedFavorites = new TreeSet<>(
-        sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>())
-    );
-    for (String f : sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>())) {
-      for (SerializablePlace p : points) {
-        if (p.isSameAs(new SerializablePlace(f))) {
-          unusedFavorites.remove(f);
-        }
-      }
+  /**
+   * Checks if the current starting point is saved in the {@link SharedPreferences}.
+   *
+   * @return true if the preferences contain a point with the same coordinates, false else
+   */
+  public boolean isOriginLocked() {
+    boolean locked = false;
+    try {
+      locked = sharedPreferences.contains(PREFS_ORIGIN)
+          && points.get(0).isSameAs(
+          new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
+    } catch (IllegalArgumentException e) {
+      Log.e("LOAD ORIGIN", e.toString());
     }
-    return unusedFavorites;
+    return locked;
   }
 
+  /**
+   * Adds a subset of the formerly unused quick access items ({@link #getUnusedFavorites()} to the
+   * list of waypoints.
+   *
+   * @param choices the items to add
+   * @return items that could not be added
+   */
   public Set<SerializablePlace> addFavorites(Set<Integer> choices) {
     List<Integer> insertedIndices = new ArrayList<>(MAXIMUM_WAYPOINTS+1);
     Set<SerializablePlace> uninsertedPlaces = new HashSet<>(MAXIMUM_WAYPOINTS+1);
@@ -229,16 +240,32 @@ public class WaypointsAdapter
     return uninsertedPlaces;
   }
 
-  public void reorder(byte[] shortestRoute) {
-    ArrayList<SerializablePlace> newOrder = new ArrayList<>(MAXIMUM_WAYPOINTS + 1);
-    newOrder.add(points.get(0));
-    for (byte p : shortestRoute) {
-      newOrder.add(points.get(p));
+  /**
+   * Creates a {@link SortedSet} of points that are on the quick access list but not currently part
+   * of the list of waypoints.
+   *
+   * @return the quick access points minus the waypoints
+   */
+  public SortedSet<String> getUnusedFavorites() {
+    unusedFavorites = new TreeSet<>(
+        sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>())
+    );
+    for (String f : sharedPreferences.getStringSet(PREFS_FAVORITES, new TreeSet<String>())) {
+      for (SerializablePlace p : points) {
+        if (p.isSameAs(new SerializablePlace(f))) {
+          unusedFavorites.remove(f);
+        }
+      }
     }
-    points = newOrder;
-    notifyDataSetChanged();
+    return unusedFavorites;
   }
 
+  /**
+   * Returns the complement of a subset of the unused quick access items (within the unused items).
+   *
+   * @param choices the subset to invert
+   * @return the complement of choices
+   */
   public Set<Integer> invertUnusedFavorites(Set<Integer> choices) {
     Set<Integer> inverted = new HashSet<>(MAXIMUM_WAYPOINTS + 1);
     for (int i = 0; i < unusedFavorites.size(); i++) {
@@ -249,14 +276,80 @@ public class WaypointsAdapter
     return inverted;
   }
 
-  public void empty() {
-    int end = isOriginLocked() ? 1 : 0;
-    for (int i = points.size() - 1; i >= end; i--) {
-      points.remove(i);
-      notifyItemRemoved(i);
+  /**
+   * Applies a new label to a {@link SerializablePlace} and its saved representations.
+   *
+   * @param index the point to manipulate
+   * @param label the new label
+   */
+  public void relabel(int index, String label) {
+    SerializablePlace p = points.get(index);
+    String favString = p.isFavorite(sharedPreferences);
+    boolean isLocked = false;
+    try {
+      isLocked = p.isSameAs(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
+    } catch (IllegalArgumentException e) {
     }
+    p.setLabel(label);
+    Editor e = sharedPreferences.edit();
+    if (favString != null) {
+      Set<String> favs = new HashSet<>(
+          sharedPreferences.getStringSet(PREFS_FAVORITES, new HashSet<String>())
+      );
+      favs.remove(favString);
+      favs.add(p.toString());
+      e.putStringSet(PREFS_FAVORITES, favs);
+    }
+    if (isLocked) {
+      e.putString(PREFS_ORIGIN, p.toString());
+    }
+    e.apply();
   }
 
+  /**
+   * Creates a {@link JSONObject} representation of the list of waypoints.
+   *
+   * @return a representation of all the vital information contained in this adapter
+   */
+  public JSONObject toJson() {
+    JSONObject representation = new JSONObject();
+    if (points.size() > 0) {
+      try {
+        representation.put(JSON_ORIGIN, points.get(0).toJson());
+        JSONArray destinations = new JSONArray();
+        for (int i = 1; i < points.size(); i++) {
+          destinations.put(points.get(i).toJson());
+        }
+        representation.put(JSON_DESTINATIONS, destinations);
+      } catch (JSONException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return representation;
+  }
+
+  /**
+   * Creates a string representing the list of waypoints for retrieving the
+   * <a href="http://project-osrm.org/docs/v5.6.0/api/#table-service">distance matrix</a>.
+   *
+   * @return a {@link String} that can be passed to an OSRM instance
+   */
+  public String toOsrmString() {
+    StringBuilder b = new StringBuilder();
+    for (int i = 0; i < points.size(); i++) {
+      SerializablePlace p = points.get(i);
+      b.append(String.format(Locale.US, "%f,%f", p.getLongitude(), p.getLatitude()));
+      if (i < points.size() - 1) {
+        b.append(";");
+      }
+    }
+    return b.toString();
+  }
+
+  /**
+   * A {@link android.support.v7.widget.RecyclerView.ViewHolder} for a waypoint and the actions the
+   * user can take on it.
+   */
   public static class ViewHolder extends RecyclerView.ViewHolder {
     private CardView root;
     private TextInputLayout label;
@@ -265,6 +358,12 @@ public class WaypointsAdapter
     private ImageView favorite;
     private TextWatcher watcher = null;
 
+    /**
+     * Saves references to all the {@link android.view.View}s that are used to display data or
+     * gather input.
+     *
+     * @param itemView the {@link CardView} holding the UI elements
+     */
     public ViewHolder(ViewGroup itemView) {
       super(itemView);
       root = (CardView) itemView;
@@ -275,6 +374,13 @@ public class WaypointsAdapter
       favorite = (ImageView) ((ViewGroup) g.getChildAt(2)).getChildAt(1);
     }
 
+    /**
+     * Displays a {@link SerializablePlace} in a {@link CardView} and prepares it for user
+     * manipulation.
+     *
+     * @param index the point to display
+     * @param adapter the {@link WaypointsAdapter} for information retrieval/manipulation
+     */
     public void setData(final int index, final WaypointsAdapter adapter) {
       SerializablePlace p = adapter.points.get(index);
       boolean isFavorite = p.isFavorite(adapter.sharedPreferences) != null;
@@ -318,30 +424,9 @@ public class WaypointsAdapter
     }
   }
 
-  public void relabel(int index, String label) {
-    SerializablePlace p = points.get(index);
-    String favString = p.isFavorite(sharedPreferences);
-    boolean isLocked = false;
-    try {
-      isLocked = p.isSameAs(new SerializablePlace(sharedPreferences.getString(PREFS_ORIGIN, "")));
-    } catch (IllegalArgumentException e) {
-    }
-    p.setLabel(label);
-    Editor e = sharedPreferences.edit();
-    if (favString != null) {
-      Set<String> favs = new HashSet<>(
-          sharedPreferences.getStringSet(PREFS_FAVORITES, new HashSet<String>())
-      );
-      favs.remove(favString);
-      favs.add(p.toString());
-      e.putStringSet(PREFS_FAVORITES, favs);
-    }
-    if (isLocked) {
-      e.putString(PREFS_ORIGIN, p.toString());
-    }
-    e.apply();
-  }
-
+  /**
+   * A minimal projection of a {@link Place}.
+   */
   public static class SerializablePlace implements Serializable {
     private double longitude;
     private double latitude;
@@ -349,6 +434,11 @@ public class WaypointsAdapter
     private CharSequence details;
     private CharSequence attributions;
 
+    /**
+     * Initializes the point from a JSON {@link String}.
+     *
+     * @param json the string containing all the point's information
+     */
     public SerializablePlace(String json) {
       try {
         JSONObject object = new JSONObject(json);
@@ -362,6 +452,11 @@ public class WaypointsAdapter
       }
     }
 
+    /**
+     * Initializes the point from a {@link Place}.
+     *
+     * @param p the original {@link Place}, as returned by the {@link com.google.android.gms.location.places.ui.PlacePicker}
+     */
     public SerializablePlace(Place p) {
       this.longitude = p.getLatLng().longitude;
       this.latitude = p.getLatLng().latitude;
@@ -394,6 +489,36 @@ public class WaypointsAdapter
       return attributions;
     }
 
+    /**
+     * Compares this object to another {@link SerializablePlace}.
+     *
+     * @param p the point to compare with
+     * @return true if both describe the same geolocation, false else
+     */
+    public boolean isSameAs(SerializablePlace p) {
+      return p.latitude == this.latitude && p.longitude == this.longitude;
+    }
+
+    /**
+     * Checks if this object is part of the quick access list.
+     *
+     * @param p the {@link SharedPreferences} that holds the quick access list
+     * @return true if this is a quick access item, false else
+     */
+    public String isFavorite(SharedPreferences p) {
+      for (String f : p.getStringSet(PREFS_FAVORITES, new HashSet<String>())) {
+        if (this.isSameAs(new SerializablePlace(f))) {
+          return f;
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Creates a {@link JSONObject} representation of the data contained in this object.
+     *
+     * @return the JSON representation
+     */
     public JSONObject toJson() {
       JSONObject representation = new JSONObject();
       try {
@@ -412,18 +537,17 @@ public class WaypointsAdapter
     public String toString() {
       return toJson().toString();
     }
+  }
 
-    public boolean isSameAs(SerializablePlace p) {
-      return p.latitude == this.latitude && p.longitude == this.longitude;
-    }
+  private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+    out.writeObject(points);
+  }
 
-    public String isFavorite(SharedPreferences p) {
-      for (String f : p.getStringSet(PREFS_FAVORITES, new HashSet<String>())) {
-        if (this.isSameAs(new SerializablePlace(f))) {
-          return f;
-        }
-      }
-      return null;
-    }
+  private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+    points = (List<SerializablePlace>) in.readObject();
+  }
+
+  private void readObjectNoData() throws ObjectStreamException {
+    points = new ArrayList<>(MAXIMUM_WAYPOINTS + 1);
   }
 }

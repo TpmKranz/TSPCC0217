@@ -579,7 +579,7 @@ public class Waypoints extends AppCompatActivity {
     /**
      * Initializes the {@link android.content.DialogInterface.OnShowListener} with a reference to
      * the {@link Set} of checked items.
-     * 
+     *
      * @param choices the set of checked items that'll be inverted
      * @param adapter the {@link WaypointsAdapter} for getting the complementary items
      */
