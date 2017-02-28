@@ -45,6 +45,8 @@ import org.tpmkranz.tsp.WaypointsAdapter.SerializablePlace;
 
 public class Waypoints extends AppCompatActivity {
   static final String BUNDLE_ADAPTER = "org.tpmkranz.tsp.Waypoints.listAdapter";
+  static final String BUNDLE_PATH = "org.tpmkranz.tsp.Waypoints.path";
+  public static final String BUNDLE_DISTANCES = "org.tpmkranz.tsp.Waypoints.distances";
 
   private RecyclerView listView;
   private WaypointsAdapter listAdapter;

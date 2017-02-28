@@ -33,4 +33,5 @@
   <string name="waypoints_action_hints_disable">Disable hints</string>
   <string name="preferences_hints">hints</string>
   <string name="waypoints_action_empty">Empty list</string>
+  <string name="solvedpoints_distance">%d minutes</string>
 </resources>

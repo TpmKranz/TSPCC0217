@@ -40,7 +40,8 @@ public class WaypointsAdapter
   public static final String PREFS_FAVORITES = "favorites";
   public static final String JSON_ATTRIBUTIONS = "attributions";
 
-  private List<SerializablePlace> points;
+  List<SerializablePlace> points;
+
   private SharedPreferences sharedPreferences;
   private SortedSet<String> unusedFavorites;
 
