@@ -2,8 +2,10 @@ package org.tpmkranz.tsp;
 
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.util.Log;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -71,6 +73,7 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
         if (distance(result) < minimalDistance) {
           minimalRoute = result;
           minimalDistance = distance(result);
+          Log.d("MINIMAL ROUTE", Arrays.toString(minimalRoute) + " " + minimalDistance);
         }
         publishProgress(i + 1);
       }
@@ -96,14 +99,21 @@ public class BruteforceTask extends AsyncTask<Void, Integer, byte[]> {
   @Override
   protected void onPostExecute(byte[] shortestRoute) {
     progressDialog.dismiss();
-    listAdapter.reorder(shortestRoute);
+    Intent intent = new Intent(progressDialog.getContext(), SolvedWaypoints.class);
+    intent.putExtra(Waypoints.BUNDLE_ADAPTER, listAdapter);
+    intent.putExtra(Waypoints.BUNDLE_PATH, shortestRoute);
+    intent.putExtra(Waypoints.BUNDLE_DISTANCES, distances);
+    progressDialog.getContext().startActivity(intent);
   }
 
   int distance(byte[] route) {
     int distance = distances[route[0]];
-    for (byte i = 0; i < n-1; i++) {
-      distance += distances[route[i]*(n+1)+route[i+1]];
+    for (byte i = 0; i < n - 1; i++) {
+      byte current = route[i];
+      byte next = route[i+1];
+      distance += distances[current*(n+1)+next];
     }
+    distance += distances[route[n-1]*(n+1)];
     return distance;
   }
 

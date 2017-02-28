@@ -61,17 +61,8 @@ public class SolvedPointsAdapter
 
     public void setData(int index, SerializablePlace[] points, byte[] path, int[][] distances) {
       index = index % points.length;
-      int pIndex;
-      for (pIndex = 0; pIndex < path.length; pIndex++) {
-        if (path[pIndex] == index) {
-          break;
-        }
-      }
-      if (pIndex == path.length) {
-        pIndex = 0;
-      } else {
-        pIndex++;
-      }
+      int pIndex = (index == 0) ? 0 : path[index-1];
+      int sIndex = ((index + 1) % points.length == 0) ? 0 : path[((index + 1) % points.length) - 1];
       point.setCardBackgroundColor(
           point.getResources().getColor(
               index == 0 ?
@@ -80,11 +71,11 @@ public class SolvedPointsAdapter
           )
       );
       label.setText(points[pIndex].getLabel());
-      details.setText(points[pIndex].getLabel());
+      details.setText(points[pIndex].getDetails());
       distance.setText(
           distance.getResources().getString(
               R.string.solvedpoints_distance,
-              (distances[pIndex][(pIndex+1)%points.length] + 59) / 60
+              (distances[pIndex][(sIndex)%points.length] + 59) / 60
           )
       );
     }
